@@ -15,6 +15,7 @@ import {
   onPriceUpdate,
 } from "./services/PriceService.js";
 import { startCoinGeckoPoller } from "./connectors/CoinGeckoConnector.js";
+import { startWhaleConnector } from "./connectors/WhaleConnector.js";
 import { startWhaleService } from "./services/WhaleService.js";
 
 const PORT = Number(process.env.PORT ?? 4000);
@@ -92,6 +93,7 @@ startCoinGeckoPoller((meta) => {
   broadcast({ type: "meta", data: meta });
 });
 
+startWhaleConnector();
 startWhaleService();
 
 // ── Start listening ───────────────────────────────────────────────────────────
