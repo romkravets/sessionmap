@@ -24,11 +24,11 @@ export function setCachedPrice(sym: string, price: number, change24h: number) {
 }
 
 export function getCachedMeta(): MarketMeta {
-  return metaCache;
+  return { ...metaCache };
 }
 
 export function setCachedMeta(meta: MarketMeta) {
-  metaCache = meta;
+  metaCache = { ...meta };
 }
 
 export function onPriceUpdate(cb: () => void) {
