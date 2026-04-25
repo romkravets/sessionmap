@@ -59,7 +59,7 @@ export function startCoinGeckoPoller(onUpdate: (meta: MarketMeta) => void) {
 
     setCachedMeta(next);
     onUpdate(next);
-    console.log(`[CoinGecko] F&G=${next.fearGreed} BTC.dom=${next.btcDominance.toFixed(1)}%`);
+    console.log(`[CoinGecko] F&G=${next.fearGreed} BTC.dom=${(next.btcDominance ?? 0).toFixed(1)}%`);
   }
 
   poll();

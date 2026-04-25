@@ -72,8 +72,8 @@ export function startWhaleConnector() {
           ts: Date.now(),
         };
 
-        lastRealWhaleTs = Date.now();
         broadcast({ type: "whale", data: event });
+        lastRealWhaleTs = Date.now();
         console.log(`[Whale] Real: ${sym} ${qty.toFixed(2)} ($${(notional / 1000).toFixed(0)}k)`);
       } catch {
         // ignore
