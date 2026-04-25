@@ -14,7 +14,7 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
-  usePrices(state.prices, dispatch);
+  usePrices(state.prices, dispatch, state.wsStatus);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>
