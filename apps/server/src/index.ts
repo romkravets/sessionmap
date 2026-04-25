@@ -17,6 +17,8 @@ import {
 import { startCoinGeckoPoller } from "./connectors/CoinGeckoConnector.js";
 import { startWhaleConnector } from "./connectors/WhaleConnector.js";
 import { startLiquidationsConnector } from "./connectors/LiquidationsConnector.js";
+import { startFundingConnector } from "./connectors/FundingConnector.js";
+import { startEthGasConnector } from "./connectors/EthGasConnector.js";
 import { startWhaleService } from "./services/WhaleService.js";
 
 const PORT = Number(process.env.PORT ?? 4000);
@@ -97,6 +99,8 @@ startCoinGeckoPoller((meta) => {
 startWhaleConnector();
 startWhaleService();
 startLiquidationsConnector();
+startFundingConnector();
+startEthGasConnector();
 
 // ── Start listening ───────────────────────────────────────────────────────────
 server.listen(PORT, () => {

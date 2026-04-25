@@ -1,11 +1,13 @@
 'use client'
 
 import { memo } from 'react'
-import type { SessionInfo, PriceSnapshot, GlobeMode, WhaleEvent } from '@sessionmap/types'
+import type { SessionInfo, PriceSnapshot, GlobeMode, WhaleEvent, MarketMeta, EthGas } from '@sessionmap/types'
 import { SESSION_COLORS_CSS, SESSION_LABELS } from '@/lib/constants'
 import { formatCountdown } from '@/lib/session-logic'
 import { GlobeModeBar } from './GlobeModeBar'
 import { WhaleTicker } from './WhaleTicker'
+import { SessionVolumeBars } from './SessionVolumeBars'
+import { AltcoinSeasonBadge } from './AltcoinSeasonBadge'
 
 interface CleanUIProps {
   session: SessionInfo
@@ -16,6 +18,10 @@ interface CleanUIProps {
   sunInfo: { lat: number; lng: number } | null
   whaleEvents: WhaleEvent[]
   wsStatus: 'connecting' | 'connected' | 'disconnected'
+  ethGas?: EthGas | null
+  marketMeta?: MarketMeta | null
+  onToggleAlerts?: () => void
+  alertCount?: number
 }
 
 export const CleanUI = memo(function CleanUI({
@@ -27,6 +33,10 @@ export const CleanUI = memo(function CleanUI({
   sunInfo,
   whaleEvents,
   wsStatus,
+  ethGas,
+  marketMeta,
+  onToggleAlerts,
+  alertCount = 0,
 }: CleanUIProps) {
   const { active, nextEvent, volatility } = session
 
@@ -56,6 +66,23 @@ export const CleanUI = memo(function CleanUI({
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <GlobeModeBar mode={globeMode} onChange={onGlobeModeChange} />
+          {onToggleAlerts && (
+            <button
+              onClick={onToggleAlerts}
+              style={{
+                pointerEvents: 'all', background: 'none',
+                border: '1px solid rgba(255,255,255,0.08)', borderRadius: '6px',
+                padding: '5px 10px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '5px',
+                color: alertCount > 0 ? 'var(--accent-warm)' : 'var(--fg-muted)', fontSize: '11px',
+                fontFamily: 'var(--font-mono, monospace)', letterSpacing: '0.08em',
+                transition: 'all 0.3s ease',
+              }}
+              title="Price alerts"
+            >
+              🔔{alertCount > 0 ? ` ${alertCount}` : ''}
+            </button>
+          )}
           <button
             onClick={onToggleTerminal}
             style={{
@@ -156,6 +183,35 @@ export const CleanUI = memo(function CleanUI({
               {volatility.toUpperCase()}
             </span>
           </div>
+        </div>
+
+        {/* Center column: volume bars, altcoin season, gas */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, maxWidth: '220px', alignSelf: 'flex-end' }}>
+          <SessionVolumeBars compact />
+          <AltcoinSeasonBadge prices={prices} compact />
+          {ethGas && (
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <span style={{ fontSize: '9px', color: 'var(--fg-muted)', fontFamily: 'var(--font-mono, monospace)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                ETH Gas
+              </span>
+              <span style={{ fontSize: '10px', color: 'var(--session-europe)', fontFamily: 'var(--font-mono, monospace)' }}>{ethGas.slow}</span>
+              <span style={{ fontSize: '9px', color: 'var(--fg-dim)', fontFamily: 'var(--font-mono, monospace)' }}>·</span>
+              <span style={{ fontSize: '10px', color: 'var(--accent-warm)', fontFamily: 'var(--font-mono, monospace)' }}>{ethGas.standard}</span>
+              <span style={{ fontSize: '9px', color: 'var(--fg-dim)', fontFamily: 'var(--font-mono, monospace)' }}>·</span>
+              <span style={{ fontSize: '10px', color: 'var(--danger)', fontFamily: 'var(--font-mono, monospace)' }}>{ethGas.fast}</span>
+              <span style={{ fontSize: '9px', color: 'var(--fg-dim)', fontFamily: 'var(--font-mono, monospace)' }}>gwei</span>
+            </div>
+          )}
+          {marketMeta && (
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <span style={{ fontSize: '9px', color: 'var(--fg-muted)', fontFamily: 'var(--font-mono, monospace)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                BTC.dom
+              </span>
+              <span style={{ fontSize: '10px', color: 'var(--accent)', fontFamily: 'var(--font-mono, monospace)', fontWeight: 500 }}>
+                {(marketMeta.btcDominance ?? 0).toFixed(1)}%
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Price ticker */}

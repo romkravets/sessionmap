@@ -6,9 +6,13 @@ import { AppProvider, useAppContext } from "@/contexts/AppContext";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { useSession } from "@/hooks/useSession";
 import { useWhaleEvents } from "@/hooks/useWhaleEvents";
+import { useSparklines } from "@/hooks/useSparklines";
+import { useLiveExchanges } from "@/hooks/useLiveExchanges";
+import { usePriceAlerts } from "@/hooks/usePriceAlerts";
 import { getSunLatLng } from "@/lib/session-logic";
 import type { GlobeMode } from "@sessionmap/types";
 import { TweaksPanel } from "@/components/panels/TweaksPanel";
+import { PriceAlertsPanel } from "@/components/panels/PriceAlertsPanel";
 
 // ── Dynamic imports (no SSR) ──────────────────────────────────────────────────
 const GlobeScene = dynamic(
@@ -37,10 +41,12 @@ function SessionMapApp() {
   const { prices, marketMeta, globeMode, terminalMode, tweaks, wsStatus } =
     state;
 
-  console.log(prices, marketMeta, globeMode, terminalMode, tweaks, wsStatus);
-
   const session = useSession();
   const whaleEvents = useWhaleEvents();
+  const priceHistory = useSparklines(prices);
+  const liveVol = useLiveExchanges(prices["BTC"]?.price ?? 0);
+  const { alerts, addAlert, removeAlert, requestNotificationPermission } =
+    usePriceAlerts(prices);
 
   const [hoveredExchangeId, setHoveredExchangeId] = useState<string | null>(
     null,
@@ -48,6 +54,7 @@ function SessionMapApp() {
   const [sunInfo, setSunInfo] = useState<{ lat: number; lng: number } | null>(
     null,
   );
+  const [alertsPanelOpen, setAlertsPanelOpen] = useState(false);
 
   // Terminal-mode body class
   useEffect(() => {
@@ -104,6 +111,8 @@ function SessionMapApp() {
         <ExchangeLabels
           hoveredId={hoveredExchangeId}
           onHover={setHoveredExchangeId}
+          liveVol={liveVol}
+          globeMode={globeMode}
         />
 
         {terminalMode ? (
@@ -115,6 +124,11 @@ function SessionMapApp() {
             onGlobeModeChange={onGlobeModeChange}
             whaleEvents={whaleEvents}
             fearGreed={marketMeta?.fearGreed ?? null}
+            liquidations={state.liquidations}
+            fundingRates={state.fundingRates}
+            ethGas={state.ethGas}
+            priceHistory={priceHistory}
+            marketMeta={marketMeta}
           />
         ) : (
           <CleanUI
@@ -126,8 +140,23 @@ function SessionMapApp() {
             sunInfo={sunInfo}
             whaleEvents={whaleEvents}
             wsStatus={wsStatus}
+            ethGas={state.ethGas}
+            marketMeta={marketMeta}
+            onToggleAlerts={() => setAlertsPanelOpen((p) => !p)}
+            alertCount={alerts.length}
           />
         )}
+
+        {/* Price alerts panel */}
+        <PriceAlertsPanel
+          open={alertsPanelOpen}
+          onClose={() => setAlertsPanelOpen(false)}
+          alerts={alerts}
+          prices={prices}
+          onAdd={addAlert}
+          onRemove={removeAlert}
+          onRequestPermission={requestNotificationPermission}
+        />
       </div>
 
       {/* Tweaks panel — lazy loaded, keyboard shortcut E */}

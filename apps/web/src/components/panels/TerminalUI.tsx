@@ -6,10 +6,17 @@ import type {
   PriceSnapshot,
   GlobeMode,
   WhaleEvent,
+  LiquidationEvent,
+  FundingRateMap,
+  EthGas,
+  MarketMeta,
 } from "@sessionmap/types";
 import { SESSION_LABELS, SESSION_COLORS_CSS } from "@/lib/constants";
 import { formatCountdown } from "@/lib/session-logic";
 import { GlobeModeBar } from "./GlobeModeBar";
+import { SessionVolumeBars } from "./SessionVolumeBars";
+import { AltcoinSeasonBadge } from "./AltcoinSeasonBadge";
+import { PriceSparklines } from "./PriceSparklines";
 
 interface FeedEntry {
   id: string;
@@ -26,6 +33,11 @@ interface TerminalUIProps {
   onGlobeModeChange: (mode: GlobeMode) => void;
   whaleEvents: WhaleEvent[];
   fearGreed: number | null;
+  liquidations?: LiquidationEvent[];
+  fundingRates?: FundingRateMap;
+  ethGas?: EthGas | null;
+  priceHistory?: Map<string, number[]>;
+  marketMeta?: MarketMeta | null;
 }
 
 const WHALE_COLOR: Record<string, string> = {
@@ -43,6 +55,11 @@ export const TerminalUI = memo(function TerminalUI({
   onGlobeModeChange,
   whaleEvents,
   fearGreed,
+  liquidations = [],
+  fundingRates = {},
+  ethGas,
+  priceHistory,
+  marketMeta,
 }: TerminalUIProps) {
   const { active, nextEvent, volatility } = session;
 
@@ -403,6 +420,78 @@ export const TerminalUI = memo(function TerminalUI({
                 </div>
               )}
             </div>
+
+            {/* ETH Gas */}
+            {ethGas && (
+              <div
+                style={{
+                  marginTop: "8px",
+                  paddingTop: "8px",
+                  borderTop: "1px solid rgba(255,255,255,0.05)",
+                }}
+              >
+                <div style={hdr}>ETH GAS (GWEI)</div>
+                <div style={{ ...row, marginBottom: "2px" }}>
+                  <span style={{ fontSize: "9px", color: "var(--fg-muted)", fontFamily: "var(--font-mono, monospace)" }}>slow</span>
+                  <span style={{ fontSize: "10px", color: "var(--session-europe)", fontFamily: "var(--font-mono, monospace)" }}>{ethGas.slow}</span>
+                </div>
+                <div style={{ ...row, marginBottom: "2px" }}>
+                  <span style={{ fontSize: "9px", color: "var(--fg-muted)", fontFamily: "var(--font-mono, monospace)" }}>standard</span>
+                  <span style={{ fontSize: "10px", color: "var(--accent-warm)", fontFamily: "var(--font-mono, monospace)" }}>{ethGas.standard}</span>
+                </div>
+                <div style={row}>
+                  <span style={{ fontSize: "9px", color: "var(--fg-muted)", fontFamily: "var(--font-mono, monospace)" }}>fast</span>
+                  <span style={{ fontSize: "10px", color: "var(--danger)", fontFamily: "var(--font-mono, monospace)" }}>{ethGas.fast}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Funding Rates */}
+            {Object.keys(fundingRates).length > 0 && (
+              <div
+                style={{
+                  marginTop: "8px",
+                  paddingTop: "8px",
+                  borderTop: "1px solid rgba(255,255,255,0.05)",
+                }}
+              >
+                <div style={hdr}>FUNDING RATES</div>
+                {Object.entries(fundingRates).map(([sym, rate]) => (
+                  <div key={sym} style={{ ...row, marginBottom: "2px" }}>
+                    <span style={{ fontSize: "9px", color: "var(--fg-muted)", fontFamily: "var(--font-mono, monospace)" }}>{sym}</span>
+                    <span style={{
+                      fontSize: "10px",
+                      fontFamily: "var(--font-mono, monospace)",
+                      color: rate >= 0 ? "var(--session-europe)" : "var(--danger)",
+                    }}>
+                      {(rate * 100).toFixed(4)}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Session Volumes */}
+            <div
+              style={{
+                marginTop: "8px",
+                paddingTop: "8px",
+                borderTop: "1px solid rgba(255,255,255,0.05)",
+              }}
+            >
+              <SessionVolumeBars compact />
+            </div>
+
+            {/* Altcoin Season */}
+            <div
+              style={{
+                marginTop: "8px",
+                paddingTop: "8px",
+                borderTop: "1px solid rgba(255,255,255,0.05)",
+              }}
+            >
+              <AltcoinSeasonBadge prices={prices} />
+            </div>
           </div>
         </div>
 
@@ -493,6 +582,46 @@ export const TerminalUI = memo(function TerminalUI({
                 flexShrink: 0,
               }}
             />
+
+            {/* Liquidations */}
+            {liquidations.length > 0 && (
+              <div style={{ flexShrink: 0, marginBottom: "6px" }}>
+                <div style={hdr}>LIQUIDATIONS</div>
+                {liquidations.slice(0, 3).map((liq) => (
+                  <div
+                    key={liq.id}
+                    style={{
+                      background: liq.side === "LONG" ? "rgba(248,113,113,0.05)" : "rgba(52,211,153,0.05)",
+                      border: `1px solid ${liq.side === "LONG" ? "rgba(248,113,113,0.25)" : "rgba(52,211,153,0.25)"}`,
+                      borderRadius: "4px",
+                      padding: "4px 8px",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span style={{
+                        fontSize: "9px",
+                        color: liq.side === "LONG" ? "var(--danger)" : "var(--session-europe)",
+                        fontFamily: "var(--font-mono, monospace)",
+                        fontWeight: 600,
+                      }}>
+                        {liq.symbol} {liq.side}
+                      </span>
+                      <span style={{ fontSize: "10px", color: "var(--fg)", fontFamily: "var(--font-mono, monospace)" }}>
+                        ${(liq.usdValue / 1000).toFixed(0)}K
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                <div
+                  style={{
+                    borderTop: "1px solid rgba(0,255,159,0.08)",
+                    margin: "6px 0",
+                    flexShrink: 0,
+                  }}
+                />
+              </div>
+            )}
 
             {/* Live feed */}
             <div
@@ -601,6 +730,12 @@ export const TerminalUI = memo(function TerminalUI({
                 {isPos ? "+" : ""}
                 {entry.change24h.toFixed(2)}%
               </span>
+              {priceHistory && (() => {
+                const sparkHistory = priceHistory.get(sym) ?? [];
+                return sparkHistory.length >= 2 ? (
+                  <PriceSparklines symbol={sym} history={sparkHistory} width={60} height={20} />
+                ) : null;
+              })()}
             </div>
           );
         })}
