@@ -3,7 +3,10 @@
 export type WsMessage =
   | { type: "prices"; data: PriceSnapshot }
   | { type: "meta"; data: MarketMeta }
-  | { type: "whale"; data: WhaleEvent };
+  | { type: "whale"; data: WhaleEvent }
+  | { type: "liquidation"; data: LiquidationEvent }
+  | { type: "funding"; data: FundingRateMap }
+  | { type: "gas"; data: EthGas };
 
 export type PriceSnapshot = Record<
   string,
@@ -23,6 +26,24 @@ export interface WhaleEvent {
   from: string;
   to: string;
   ts: number;
+}
+
+export interface LiquidationEvent {
+  id: string;
+  symbol: string;   // "BTC", "ETH", etc.
+  side: "LONG" | "SHORT";
+  qty: number;
+  price: number;
+  usdValue: number;
+  ts: number;
+}
+
+export type FundingRateMap = Record<string, number>;
+
+export interface EthGas {
+  slow: number;
+  standard: number;
+  fast: number;
 }
 
 // ── Exchange / Globe Types ────────────────────────────────────────────────────
@@ -61,7 +82,7 @@ export interface SessionInfo {
 
 // ── App State ─────────────────────────────────────────────────────────────────
 
-export type GlobeMode = "auto" | "free" | "follow";
+export type GlobeMode = "auto" | "free" | "follow" | "heatmap";
 export type WsStatus = "connecting" | "connected" | "disconnected";
 
 export interface TweakValues {
@@ -76,6 +97,9 @@ export interface AppState {
   prices: PriceSnapshot;
   marketMeta: MarketMeta | null;
   whaleEvents: WhaleEvent[];
+  liquidations: LiquidationEvent[];
+  fundingRates: FundingRateMap;
+  ethGas: EthGas | null;
   globeMode: GlobeMode;
   terminalMode: boolean;
   tweaks: TweakValues;

@@ -4,9 +4,10 @@ import { memo } from 'react'
 import type { GlobeMode } from '@sessionmap/types'
 
 const MODE_META: Record<GlobeMode, { label: string; icon: string; tip: string }> = {
-  auto:   { label: 'Auto',       icon: '↺', tip: 'Slow auto-rotation' },
-  free:   { label: 'Free',       icon: '✦', tip: 'Drag to explore' },
-  follow: { label: 'Follow Sun', icon: '☀', tip: 'Camera tracks dayside' },
+  auto:    { label: 'Auto',       icon: '↺', tip: 'Slow auto-rotation' },
+  free:    { label: 'Free',       icon: '✦', tip: 'Drag to explore' },
+  follow:  { label: 'Follow Sun', icon: '☀', tip: 'Camera tracks dayside' },
+  heatmap: { label: 'Heatmap',    icon: '🔥', tip: 'Volume heatmap overlay' },
 }
 
 interface GlobeModeBarProps {
