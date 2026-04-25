@@ -4,15 +4,15 @@ Crypto trading sessions visualised on a real-time 3D globe — live prices, whal
 
 ## Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | Next.js 14 App Router |
-| Styling | Tailwind CSS |
-| 3D Globe | Three.js (client-only) |
-| State | React Context + useReducer |
-| WS Server | Node.js + `ws` + Express |
+| Layer        | Technology                    |
+| ------------ | ----------------------------- |
+| Framework    | Next.js 14 App Router         |
+| Styling      | Tailwind CSS                  |
+| 3D Globe     | Three.js (client-only)        |
+| State        | React Context + useReducer    |
+| WS Server    | Node.js + `ws` + Express      |
 | Shared Types | `packages/types` (TypeScript) |
-| Monorepo | pnpm workspaces + Turborepo |
+| Monorepo     | pnpm workspaces + Turborepo   |
 
 ---
 
@@ -47,6 +47,19 @@ Edit both `.env` files as needed. The only required key for offline dev is `NEXT
 # Start both web and server together
 pnpm dev
 
+
+
+ Рішення — видалити кеш і перезапустити dev сервер:
+
+  rm -rf apps/web/.next
+  pnpm --filter @sessionmap/web dev
+
+  Або якщо запускаєте обидва сервіси разом:
+
+  rm -rf apps/web/.next
+  pnpm dev
+
+
 # Or individually
 pnpm --filter @sessionmap/web dev      # http://localhost:3000
 pnpm --filter @sessionmap/server dev   # ws://localhost:4000
@@ -73,16 +86,16 @@ sessionmap/
 
 ## Key features
 
-| Feature | Description |
-|---------|-------------|
-| 3D Globe | Custom GLSL shaders, day/night side, atmosphere glow, terminator line |
-| Sun marker | Real-time solar position, follow-sun camera mode |
-| Exchange markers | 20 major venues, colour-coded by session region, hover tooltip |
-| Whale arcs | Animated great-circle arcs for simulated (or live) whale transfers |
-| Session logic | Asia / Europe / Americas sessions, countdown, overlap detection |
-| Terminal mode | Click **Terminal** or receive live feed in monospace hacker UI |
-| Tweaks panel | Press **E** — rotation speed, time offset, visibility toggles |
-| WS reconnect | Exponential backoff (1s → 2s → 4s → max 30s), Zod message validation |
+| Feature          | Description                                                           |
+| ---------------- | --------------------------------------------------------------------- |
+| 3D Globe         | Custom GLSL shaders, day/night side, atmosphere glow, terminator line |
+| Sun marker       | Real-time solar position, follow-sun camera mode                      |
+| Exchange markers | 20 major venues, colour-coded by session region, hover tooltip        |
+| Whale arcs       | Animated great-circle arcs for simulated (or live) whale transfers    |
+| Session logic    | Asia / Europe / Americas sessions, countdown, overlap detection       |
+| Terminal mode    | Click **Terminal** or receive live feed in monospace hacker UI        |
+| Tweaks panel     | Press **E** — rotation speed, time offset, visibility toggles         |
+| WS reconnect     | Exponential backoff (1s → 2s → 4s → max 30s), Zod message validation  |
 
 ---
 
@@ -90,22 +103,22 @@ sessionmap/
 
 ### `apps/web/.env.local`
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `NEXTAUTH_URL` | `http://localhost:3000` | NextAuth base URL |
-| `NEXTAUTH_SECRET` | — | Required (32+ random chars) |
-| `NEXT_PUBLIC_WS_URL` | `ws://localhost:4000` | WS server address |
-| `MONGODB_URI` | — | Optional (NextAuth sessions) |
+| Variable             | Default                 | Description                  |
+| -------------------- | ----------------------- | ---------------------------- |
+| `NEXTAUTH_URL`       | `http://localhost:3000` | NextAuth base URL            |
+| `NEXTAUTH_SECRET`    | —                       | Required (32+ random chars)  |
+| `NEXT_PUBLIC_WS_URL` | `ws://localhost:4000`   | WS server address            |
+| `MONGODB_URI`        | —                       | Optional (NextAuth sessions) |
 
 ### `apps/server/.env`
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `4000` | Server port |
-| `CLIENT_ORIGIN` | `http://localhost:3000` | CORS + WS origin whitelist |
-| `BINANCE_WS_URL` | Binance `!ticker@arr` | Override for testing |
-| `COINGECKO_API_URL` | CoinGecko v3 | Override for testing |
-| `MONGODB_URI` | — | Optional (user settings) |
+| Variable            | Default                 | Description                |
+| ------------------- | ----------------------- | -------------------------- |
+| `PORT`              | `4000`                  | Server port                |
+| `CLIENT_ORIGIN`     | `http://localhost:3000` | CORS + WS origin whitelist |
+| `BINANCE_WS_URL`    | Binance `!ticker@arr`   | Override for testing       |
+| `COINGECKO_API_URL` | CoinGecko v3            | Override for testing       |
+| `MONGODB_URI`       | —                       | Optional (user settings)   |
 
 ---
 

@@ -417,7 +417,7 @@ export const TerminalUI = memo(function TerminalUI({
             borderLeft: "1px solid rgba(0,255,159,0.08)",
           }}
         >
-          <div style={{ ...sidePanelScroll, gap: 0 }}>
+          <div style={{ ...sidePanelScroll, gap: 0, overflowY: "hidden" }}>
             {/* Whale alerts */}
             <div style={{ flexShrink: 0 }}>
               <div style={hdr}>WHALE ALERTS</div>

@@ -250,7 +250,10 @@ export function useGlobe(
 
       // ── Texture loading ───────────────────────────────────────────────────
       const loader = new THREE.TextureLoader();
+      const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
       const dayURLs = [
+        // 4096px NASA Blue Marble — sharper at all angles
+        "https://cdn.jsdelivr.net/gh/turban/Leaflet.Mask@master/img/earth-blue-marble.jpg",
         "https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg",
         "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_atmos_2048.jpg",
       ];
@@ -277,6 +280,10 @@ export function useGlobe(
         loader.load(
           urls[0],
           (t) => {
+            // Anisotropic filtering eliminates pixelation at oblique angles (equator)
+            t.anisotropy = maxAnisotropy;
+            t.minFilter = THREE.LinearMipmapLinearFilter;
+            t.magFilter = THREE.LinearFilter;
             uniform.value = t;
             onDone();
           },

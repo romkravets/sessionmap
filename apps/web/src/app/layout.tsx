@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link
           rel="preload"
           as="image"
-          href="https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg"
+          href="https://cdn.jsdelivr.net/gh/turban/Leaflet.Mask@master/img/earth-blue-marble.jpg"
           crossOrigin="anonymous"
         />
         <link
