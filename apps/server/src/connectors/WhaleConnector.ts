@@ -1,3 +1,4 @@
+import WebSocket from "ws";
 import type { WhaleEvent } from "@sessionmap/types";
 import { broadcast } from "../ws/broadcaster.js";
 
@@ -24,7 +25,7 @@ function randomExchangePair(): { from: string; to: string } {
   return { from: EXCHANGES[i1], to: EXCHANGES[i2] };
 }
 
-let lastRealWhaleTs = 0;
+let lastRealWhaleTs = Date.now();
 export function getLastRealWhaleTs() { return lastRealWhaleTs; }
 
 interface AggTrade {
@@ -35,12 +36,11 @@ interface AggTrade {
 }
 
 export function startWhaleConnector() {
-  const WS = require("ws");
   const streams = AGG_SYMBOLS.map((s) => `${s}@aggTrade`).join("/");
   const url = `wss://stream.binance.com:9443/stream?streams=${streams}`;
 
   function connect() {
-    const ws = new WS(url);
+    const ws = new WebSocket(url);
 
     ws.on("open", () => console.log("[WhaleConnector] Connected to aggTrade streams"));
 

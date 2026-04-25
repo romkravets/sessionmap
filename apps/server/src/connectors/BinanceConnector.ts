@@ -1,3 +1,4 @@
+import WebSocket from "ws";
 import {
   setCachedPrice,
   notifyPriceUpdate,
@@ -36,13 +37,12 @@ export async function bootstrapPrices(): Promise<void> {
 }
 
 export function startBinanceConnector() {
-  const WS = require("ws");
   const url =
     process.env.BINANCE_WS_URL ??
     "wss://stream.binance.com:9443/ws/!ticker@arr";
 
   function connect() {
-    const ws = new WS(url);
+    const ws = new WebSocket(url);
 
     ws.on("open", () => console.log("[Binance] Connected to", url));
 
