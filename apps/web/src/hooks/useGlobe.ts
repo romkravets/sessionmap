@@ -252,8 +252,7 @@ export function useGlobe(
       const loader = new THREE.TextureLoader();
       const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
       const dayURLs = [
-        // 4096px NASA Blue Marble — sharper at all angles
-        "https://cdn.jsdelivr.net/gh/turban/Leaflet.Mask@master/img/earth-blue-marble.jpg",
+        // three-globe package ships this texture — reliable CDN
         "https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg",
         "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_atmos_2048.jpg",
       ];

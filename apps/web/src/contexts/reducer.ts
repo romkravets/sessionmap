@@ -40,17 +40,22 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'META_UPDATE':
       return { ...state, marketMeta: action.payload }
 
-    case 'WHALE_EVENT':
+    case 'WHALE_EVENT': {
+      // skip if we've already seen this id (prevents duplicates on reconnect)
+      if (state.whaleEvents.some((e) => e.id === action.payload.id)) return state
       return {
         ...state,
         whaleEvents: [action.payload, ...state.whaleEvents].slice(0, 30),
       }
+    }
 
-    case 'LIQUIDATION_EVENT':
+    case 'LIQUIDATION_EVENT': {
+      if (state.liquidations.some((e) => e.id === action.payload.id)) return state
       return {
         ...state,
         liquidations: [action.payload, ...state.liquidations].slice(0, 30),
       }
+    }
 
     case 'FUNDING_UPDATE':
       return { ...state, fundingRates: action.payload }

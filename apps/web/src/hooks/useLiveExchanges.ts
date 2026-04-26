@@ -35,7 +35,7 @@ export function useLiveExchanges(btcPrice: number): Map<string, number> {
     async function fetchExchanges() {
       try {
         const res = await fetch(
-          'https://api.coingecko.com/api/v3/exchanges?per_page=50&page=1',
+          '/api/exchanges',
           { signal: AbortSignal.timeout(10000) }
         )
         if (!res.ok) return
