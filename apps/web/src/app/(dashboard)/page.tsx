@@ -9,6 +9,8 @@ import { useWhaleEvents } from "@/hooks/useWhaleEvents";
 import { useSparklines } from "@/hooks/useSparklines";
 import { useLiveExchanges } from "@/hooks/useLiveExchanges";
 import { usePriceAlerts } from "@/hooks/usePriceAlerts";
+import { useStockTicker } from "@/hooks/useStockTicker";
+import { useCorrelation } from "@/hooks/useCorrelation";
 import { getSunLatLng } from "@/lib/session-logic";
 import type { GlobeMode } from "@sessionmap/types";
 import { TweaksPanel } from "@/components/panels/TweaksPanel";
@@ -22,6 +24,13 @@ const GlobeScene = dynamic(
 const ExchangeLabels = dynamic(
   () =>
     import("@/components/globe/ExchangeLabels").then((m) => m.ExchangeLabels),
+  { ssr: false },
+);
+const StockMarketLabels = dynamic(
+  () =>
+    import("@/components/globe/StockMarketLabels").then(
+      (m) => m.StockMarketLabels,
+    ),
   { ssr: false },
 );
 const CleanUI = dynamic(
@@ -47,6 +56,8 @@ function SessionMapApp() {
   const liveVol = useLiveExchanges(prices["BTC"]?.price ?? 0);
   const { alerts, addAlert, removeAlert, requestNotificationPermission } =
     usePriceAlerts(prices);
+  const { quotes: stockQuotes } = useStockTicker();
+  const btcQqqCorr = useCorrelation();
 
   const [hoveredExchangeId, setHoveredExchangeId] = useState<string | null>(
     null,
@@ -114,6 +125,7 @@ function SessionMapApp() {
           liveVol={liveVol}
           globeMode={globeMode}
         />
+        <StockMarketLabels />
 
         {terminalMode ? (
           <TerminalUI
@@ -129,6 +141,7 @@ function SessionMapApp() {
             ethGas={state.ethGas}
             priceHistory={priceHistory}
             marketMeta={marketMeta}
+            stockQuotes={stockQuotes}
           />
         ) : (
           <CleanUI
@@ -144,6 +157,7 @@ function SessionMapApp() {
             marketMeta={marketMeta}
             onToggleAlerts={() => setAlertsPanelOpen((p) => !p)}
             alertCount={alerts.length}
+            btcQqqCorr={btcQqqCorr}
           />
         )}
 

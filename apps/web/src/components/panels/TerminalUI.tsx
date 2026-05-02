@@ -17,6 +17,7 @@ import { GlobeModeBar } from "./GlobeModeBar";
 import { SessionVolumeBars } from "./SessionVolumeBars";
 import { AltcoinSeasonBadge } from "./AltcoinSeasonBadge";
 import { PriceSparklines } from "./PriceSparklines";
+import type { StockQuote } from "@/hooks/useStockTicker";
 
 interface FeedEntry {
   id: string;
@@ -38,6 +39,7 @@ interface TerminalUIProps {
   ethGas?: EthGas | null;
   priceHistory?: Map<string, number[]>;
   marketMeta?: MarketMeta | null;
+  stockQuotes?: StockQuote[];
 }
 
 const WHALE_COLOR: Record<string, string> = {
@@ -60,6 +62,7 @@ export const TerminalUI = memo(function TerminalUI({
   ethGas,
   priceHistory,
   marketMeta,
+  stockQuotes = [],
 }: TerminalUIProps) {
   const { active, nextEvent, volatility } = session;
 
@@ -432,16 +435,64 @@ export const TerminalUI = memo(function TerminalUI({
               >
                 <div style={hdr}>ETH GAS (GWEI)</div>
                 <div style={{ ...row, marginBottom: "2px" }}>
-                  <span style={{ fontSize: "9px", color: "var(--fg-muted)", fontFamily: "var(--font-mono, monospace)" }}>slow</span>
-                  <span style={{ fontSize: "10px", color: "var(--session-europe)", fontFamily: "var(--font-mono, monospace)" }}>{ethGas.slow}</span>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      color: "var(--fg-muted)",
+                      fontFamily: "var(--font-mono, monospace)",
+                    }}
+                  >
+                    slow
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "10px",
+                      color: "var(--session-europe)",
+                      fontFamily: "var(--font-mono, monospace)",
+                    }}
+                  >
+                    {ethGas.slow}
+                  </span>
                 </div>
                 <div style={{ ...row, marginBottom: "2px" }}>
-                  <span style={{ fontSize: "9px", color: "var(--fg-muted)", fontFamily: "var(--font-mono, monospace)" }}>standard</span>
-                  <span style={{ fontSize: "10px", color: "var(--accent-warm)", fontFamily: "var(--font-mono, monospace)" }}>{ethGas.standard}</span>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      color: "var(--fg-muted)",
+                      fontFamily: "var(--font-mono, monospace)",
+                    }}
+                  >
+                    standard
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "10px",
+                      color: "var(--accent-warm)",
+                      fontFamily: "var(--font-mono, monospace)",
+                    }}
+                  >
+                    {ethGas.standard}
+                  </span>
                 </div>
                 <div style={row}>
-                  <span style={{ fontSize: "9px", color: "var(--fg-muted)", fontFamily: "var(--font-mono, monospace)" }}>fast</span>
-                  <span style={{ fontSize: "10px", color: "var(--danger)", fontFamily: "var(--font-mono, monospace)" }}>{ethGas.fast}</span>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      color: "var(--fg-muted)",
+                      fontFamily: "var(--font-mono, monospace)",
+                    }}
+                  >
+                    fast
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "10px",
+                      color: "var(--danger)",
+                      fontFamily: "var(--font-mono, monospace)",
+                    }}
+                  >
+                    {ethGas.fast}
+                  </span>
                 </div>
               </div>
             )}
@@ -458,12 +509,23 @@ export const TerminalUI = memo(function TerminalUI({
                 <div style={hdr}>FUNDING RATES</div>
                 {Object.entries(fundingRates).map(([sym, rate]) => (
                   <div key={sym} style={{ ...row, marginBottom: "2px" }}>
-                    <span style={{ fontSize: "9px", color: "var(--fg-muted)", fontFamily: "var(--font-mono, monospace)" }}>{sym}</span>
-                    <span style={{
-                      fontSize: "10px",
-                      fontFamily: "var(--font-mono, monospace)",
-                      color: rate >= 0 ? "var(--session-europe)" : "var(--danger)",
-                    }}>
+                    <span
+                      style={{
+                        fontSize: "9px",
+                        color: "var(--fg-muted)",
+                        fontFamily: "var(--font-mono, monospace)",
+                      }}
+                    >
+                      {sym}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        fontFamily: "var(--font-mono, monospace)",
+                        color:
+                          rate >= 0 ? "var(--session-europe)" : "var(--danger)",
+                      }}
+                    >
                       {(rate * 100).toFixed(4)}%
                     </span>
                   </div>
@@ -492,6 +554,93 @@ export const TerminalUI = memo(function TerminalUI({
             >
               <AltcoinSeasonBadge prices={prices} />
             </div>
+
+            {/* ── EQUITIES ────────────────────────────────── */}
+            {stockQuotes.length > 0 && (
+              <div
+                style={{
+                  marginTop: "8px",
+                  paddingTop: "8px",
+                  borderTop: "1px solid rgba(255,255,255,0.05)",
+                }}
+              >
+                <div style={hdr}>EQUITIES</div>
+                {stockQuotes.map((q) => {
+                  const isLive = q.marketState === "REGULAR";
+                  const isPos = q.changePct >= 0;
+                  // Format price: indices like DJI have 5-digit prices
+                  const priceStr =
+                    q.price >= 10000
+                      ? q.price.toLocaleString("en-US", {
+                          maximumFractionDigits: 0,
+                        })
+                      : q.price >= 100
+                        ? q.price.toFixed(2)
+                        : q.price.toFixed(2);
+                  return (
+                    <div
+                      key={q.symbol}
+                      style={{
+                        ...row,
+                        marginBottom: "4px",
+                        opacity: isLive ? 1 : 0.45,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "9px",
+                          color: "var(--fg-muted)",
+                          fontFamily: "var(--font-mono, monospace)",
+                          minWidth: "42px",
+                        }}
+                      >
+                        {q.symbol}
+                      </span>
+                      {isLive ? (
+                        <>
+                          <span
+                            style={{
+                              fontSize: "10px",
+                              color: "var(--fg)",
+                              fontFamily: "var(--font-mono, monospace)",
+                              flex: 1,
+                              textAlign: "right",
+                            }}
+                          >
+                            ${priceStr}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: "9px",
+                              fontFamily: "var(--font-mono, monospace)",
+                              color: isPos
+                                ? "var(--session-europe)"
+                                : "var(--danger)",
+                              minWidth: "46px",
+                              textAlign: "right",
+                            }}
+                          >
+                            {isPos ? "+" : ""}
+                            {q.changePct.toFixed(2)}%
+                          </span>
+                        </>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: "9px",
+                            color: "var(--fg-dim)",
+                            fontFamily: "var(--font-mono, monospace)",
+                            fontStyle: "italic",
+                          }}
+                        >
+                          closed
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -591,23 +740,42 @@ export const TerminalUI = memo(function TerminalUI({
                   <div
                     key={liq.id}
                     style={{
-                      background: liq.side === "LONG" ? "rgba(248,113,113,0.05)" : "rgba(52,211,153,0.05)",
+                      background:
+                        liq.side === "LONG"
+                          ? "rgba(248,113,113,0.05)"
+                          : "rgba(52,211,153,0.05)",
                       border: `1px solid ${liq.side === "LONG" ? "rgba(248,113,113,0.25)" : "rgba(52,211,153,0.25)"}`,
                       borderRadius: "4px",
                       padding: "4px 8px",
                       marginBottom: "4px",
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span style={{
-                        fontSize: "9px",
-                        color: liq.side === "LONG" ? "var(--danger)" : "var(--session-europe)",
-                        fontFamily: "var(--font-mono, monospace)",
-                        fontWeight: 600,
-                      }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "9px",
+                          color:
+                            liq.side === "LONG"
+                              ? "var(--danger)"
+                              : "var(--session-europe)",
+                          fontFamily: "var(--font-mono, monospace)",
+                          fontWeight: 600,
+                        }}
+                      >
                         {liq.symbol} {liq.side}
                       </span>
-                      <span style={{ fontSize: "10px", color: "var(--fg)", fontFamily: "var(--font-mono, monospace)" }}>
+                      <span
+                        style={{
+                          fontSize: "10px",
+                          color: "var(--fg)",
+                          fontFamily: "var(--font-mono, monospace)",
+                        }}
+                      >
                         ${(liq.usdValue / 1000).toFixed(0)}K
                       </span>
                     </div>
@@ -730,12 +898,18 @@ export const TerminalUI = memo(function TerminalUI({
                 {isPos ? "+" : ""}
                 {entry.change24h.toFixed(2)}%
               </span>
-              {priceHistory && (() => {
-                const sparkHistory = priceHistory.get(sym) ?? [];
-                return sparkHistory.length >= 2 ? (
-                  <PriceSparklines symbol={sym} history={sparkHistory} width={60} height={20} />
-                ) : null;
-              })()}
+              {priceHistory &&
+                (() => {
+                  const sparkHistory = priceHistory.get(sym) ?? [];
+                  return sparkHistory.length >= 2 ? (
+                    <PriceSparklines
+                      symbol={sym}
+                      history={sparkHistory}
+                      width={60}
+                      height={20}
+                    />
+                  ) : null;
+                })()}
             </div>
           );
         })}
