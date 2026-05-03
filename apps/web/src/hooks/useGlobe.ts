@@ -282,9 +282,9 @@ export function useGlobe(
       //          → local topo 4K → CDN blue marble
       //   night → local 8K city lights → CDN fallbacks
       const dayURLs = [
-        "/textures/earth-day-8k.jpg",  // preferred: 8K clean day — no ocean/land relief noise
+        "/textures/earth-day-8k.jpg", // preferred: 8K clean day — no ocean/land relief noise
         "/textures/earth-topo-4k.jpg", // fallback: NASA topo+bathy 5400×2700
-        "/textures/earth-day-4k.jpg",  // legacy blue marble fallback
+        "/textures/earth-day-4k.jpg", // legacy blue marble fallback
         "https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg",
       ];
       const nightURLs = [
@@ -445,50 +445,65 @@ export function useGlobe(
       );
       scene.add(sunMarker, sunGlow);
 
-      // ── Country borders (political map) ──────────────────────────────────
+      // ── Country borders (political map) — use land-only boundary lines ───
+      // Fetch Natural Earth 'boundary_lines_land' so coastlines are not drawn
       const borderGroup = new THREE.Group();
       scene.add(borderGroup);
 
-      interface TopoJSON {
-        transform: { scale: [number, number]; translate: [number, number] };
-        arcs: number[][][];
-      }
-      fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
-        .then((r) => r.json())
-        .then((topo: TopoJSON) => {
-          if (!mounted) return; // Component unmounted before fetch resolved — skip
-          const { scale, translate } = topo.transform;
-          const pts: THREE.Vector3[] = [];
-          for (const arc of topo.arcs) {
-            let x = 0,
-              y = 0;
-            const coords: [number, number][] = arc.map(([dx, dy]) => {
-              x += dx;
-              y += dy;
-              return [x * scale[0] + translate[0], y * scale[1] + translate[1]];
-            });
-            for (let i = 0; i < coords.length - 1; i++) {
-              pts.push(
-                // Slightly raised (1.004) so depth buffer reliably shows above globe
-                latLngToVec3(coords[i][1], coords[i][0], 1.004),
-                latLngToVec3(coords[i + 1][1], coords[i + 1][0], 1.004),
-              );
+      const boundaryURLs = [
+        // prefer small (110m) resolution for speed & small download size
+        "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_110m_admin_0_boundary_lines_land.geojson",
+        // fallback to 50m
+        "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_50m_admin_0_boundary_lines_land.geojson",
+      ];
+
+      (async () => {
+        for (const url of boundaryURLs) {
+          try {
+            const res = await fetch(url);
+            if (!res || !res.ok) continue;
+            const geo = await res.json();
+            if (!mounted) return;
+            const pts: THREE.Vector3[] = [];
+            for (const feature of geo.features) {
+              if (!feature.geometry) continue;
+              const { type, coordinates } = feature.geometry as any;
+              const lines: number[][][] =
+                type === "MultiLineString"
+                  ? (coordinates as number[][][])
+                  : [coordinates as number[][]];
+              for (const line of lines) {
+                for (let i = 0; i < line.length - 1; i++) {
+                  pts.push(
+                    latLngToVec3(line[i][1], line[i][0], 1.004),
+                    latLngToVec3(line[i + 1][1], line[i + 1][0], 1.004),
+                  );
+                }
+              }
             }
+            const geom = new THREE.BufferGeometry().setFromPoints(pts);
+            const mat = new THREE.LineDashedMaterial({
+              color: 0x6699bb,
+              dashSize: 0.02,
+              gapSize: 0.01,
+              transparent: true,
+              opacity: 0.38,
+              depthWrite: false,
+              depthTest: true,
+            });
+            const borderLines = new THREE.LineSegments(geom, mat);
+            // compute line distances for dashed effect
+            (
+              borderLines as unknown as { computeLineDistances?: () => void }
+            ).computeLineDistances?.();
+            borderGroup.add(borderLines);
+            break;
+          } catch (e) {
+            // try next URL
+            continue;
           }
-          borderGroup.add(
-            new THREE.LineSegments(
-              new THREE.BufferGeometry().setFromPoints(pts),
-              new THREE.LineBasicMaterial({
-                color: 0x6699bb, // muted steel-blue — political map style
-                transparent: true,
-                opacity: 0.35,
-                depthWrite: false,
-                depthTest: true,
-              }),
-            ),
-          );
-        })
-        .catch(() => {}); // Gracefully skip if CDN unreachable
+        }
+      })().catch(() => {});
 
       // ── Rivers (Natural Earth 50m) ────────────────────────────────────────
       interface RiversGeoJSON {
@@ -540,7 +555,7 @@ export function useGlobe(
         })
         .catch(() => {}); // Gracefully skip if CDN unreachable
 
-      // ── Major railways (Natural Earth 10m simplified) ─────────────────────
+      // ── Major railways (Natural Earth simplified with fallbacks) ──────────
       interface RailGeoJSON {
         features: Array<{
           geometry: {
@@ -552,42 +567,153 @@ export function useGlobe(
       const railGroup = new THREE.Group();
       scene.add(railGroup);
 
-      fetch(
-        "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@v5.1.2/geojson/ne_10m_railroads.geojson",
-      )
-        .then((r) => r.json())
-        .then((geo: RailGeoJSON) => {
-          if (!mounted) return;
-          const pts: THREE.Vector3[] = [];
-          for (const feature of geo.features) {
-            const { type, coordinates } = feature.geometry;
-            const lines: number[][][] =
-              type === "MultiLineString"
-                ? (coordinates as number[][][])
-                : [coordinates as number[][]];
-            for (const line of lines) {
-              for (let i = 0; i < line.length - 1; i++) {
-                pts.push(
-                  latLngToVec3(line[i][1], line[i][0], 1.002),
-                  latLngToVec3(line[i + 1][1], line[i + 1][0], 1.002),
-                );
+      // Try smaller resolutions first to avoid CDN 20MB limit / 403 errors
+      const railURLs = [
+        // smaller, more compact dataset (50m)
+        "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@v5.1.2/geojson/ne_50m_railroads.geojson",
+        // fallback to the lowest resolution if 50m unavailable
+        "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@v5.1.2/geojson/ne_110m_railroads.geojson",
+      ];
+
+      (async () => {
+        // Try a local, pre-simplified GeoJSON first (generated by scripts/download-railroads.mjs)
+        try {
+          const localRes = await fetch("/data/ne_railroads_simplified.geojson");
+          if (localRes && localRes.ok) {
+            const geo: RailGeoJSON = await localRes.json();
+            if (mounted) {
+              const pts: THREE.Vector3[] = [];
+              for (const feature of geo.features) {
+                const { type, coordinates } = feature.geometry;
+                const lines: number[][][] =
+                  type === "MultiLineString"
+                    ? (coordinates as number[][][])
+                    : [coordinates as number[][]];
+                for (const line of lines) {
+                  for (let i = 0; i < line.length - 1; i++) {
+                    pts.push(
+                      latLngToVec3(line[i][1], line[i][0], 1.002),
+                      latLngToVec3(line[i + 1][1], line[i + 1][0], 1.002),
+                    );
+                  }
+                }
+              }
+              railGroup.add(
+                new THREE.LineSegments(
+                  new THREE.BufferGeometry().setFromPoints(pts),
+                  new THREE.LineBasicMaterial({
+                    color: 0xb06020,
+                    transparent: true,
+                    opacity: 0.35,
+                    depthWrite: false,
+                    depthTest: true,
+                  }),
+                ),
+              );
+            }
+            return;
+          }
+        } catch (e) {
+          // ignore and try CDN fallbacks below
+        }
+
+        for (const url of railURLs) {
+          try {
+            const res = await fetch(url);
+            if (!res || !res.ok) continue;
+            // try to guard against very large responses when headers are available
+            const cl = res.headers ? res.headers.get("content-length") : null;
+            if (cl && parseInt(cl, 10) > 20 * 1024 * 1024) continue;
+            const geo: RailGeoJSON = await res.json();
+            if (!mounted) return;
+            const pts: THREE.Vector3[] = [];
+            for (const feature of geo.features) {
+              const { type, coordinates } = feature.geometry;
+              const lines: number[][][] =
+                type === "MultiLineString"
+                  ? (coordinates as number[][][])
+                  : [coordinates as number[][]];
+              for (const line of lines) {
+                for (let i = 0; i < line.length - 1; i++) {
+                  pts.push(
+                    latLngToVec3(line[i][1], line[i][0], 1.002),
+                    latLngToVec3(line[i + 1][1], line[i + 1][0], 1.002),
+                  );
+                }
               }
             }
+            railGroup.add(
+              new THREE.LineSegments(
+                new THREE.BufferGeometry().setFromPoints(pts),
+                new THREE.LineBasicMaterial({
+                  color: 0xb06020, // warm brown — railway colour convention
+                  transparent: true,
+                  opacity: 0.35,
+                  depthWrite: false,
+                  depthTest: true,
+                }),
+              ),
+            );
+            break; // loaded successfully — stop trying further URLs
+          } catch (e) {
+            // try next URL
+            continue;
           }
-          railGroup.add(
-            new THREE.LineSegments(
-              new THREE.BufferGeometry().setFromPoints(pts),
-              new THREE.LineBasicMaterial({
-                color: 0xb06020, // warm brown — railway colour convention
-                transparent: true,
-                opacity: 0.35,
-                depthWrite: false,
-                depthTest: true,
-              }),
-            ),
-          );
-        })
-        .catch(() => {}); // 10m data is large — silently skip if too slow
+        }
+      })().catch(() => {});
+
+      // ── Roads (automotive) — try natural earth with fallbacks ─────────────
+      const roadGroup = new THREE.Group();
+      scene.add(roadGroup);
+
+      const roadURLs = [
+        "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_110m_roads.geojson",
+        "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_50m_roads.geojson",
+        "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_10m_roads.geojson",
+      ];
+
+      (async () => {
+        for (const url of roadURLs) {
+          try {
+            const res = await fetch(url);
+            if (!res || !res.ok) continue;
+            const geo = await res.json();
+            if (!mounted) return;
+            const pts: THREE.Vector3[] = [];
+            for (const feature of geo.features) {
+              if (!feature.geometry) continue;
+              const { type, coordinates } = feature.geometry as any;
+              const lines: number[][][] =
+                type === "MultiLineString"
+                  ? (coordinates as number[][][])
+                  : [coordinates as number[][]];
+              for (const line of lines) {
+                for (let i = 0; i < line.length - 1; i++) {
+                  pts.push(
+                    latLngToVec3(line[i][1], line[i][0], 1.002),
+                    latLngToVec3(line[i + 1][1], line[i + 1][0], 1.002),
+                  );
+                }
+              }
+            }
+            roadGroup.add(
+              new THREE.LineSegments(
+                new THREE.BufferGeometry().setFromPoints(pts),
+                new THREE.LineBasicMaterial({
+                  color: 0xd0d0d0,
+                  transparent: true,
+                  opacity: 0.45,
+                  depthWrite: false,
+                  depthTest: true,
+                }),
+              ),
+            );
+            break;
+          } catch (e) {
+            continue;
+          }
+        }
+      })().catch(() => {});
 
       // ── Major shipping / trade routes ─────────────────────────────────────
       const TRADE_LANES: Array<{ waypoints: [number, number][] }> = [

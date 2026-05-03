@@ -44,7 +44,8 @@ const TEXTURES = [
       // NASA Visible Earth — Topography + Bathymetry, April 2004, 5400×2700 (kept as fallback)
       "https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73909/world.topo.bathy.200412.3x5400x2700.jpg",
     ],
-    description: "NASA Topo + Bathymetry (terrain relief + ocean depth) — fallback only",
+    description:
+      "NASA Topo + Bathymetry (terrain relief + ocean depth) — fallback only",
   },
   {
     filename: "earth-night-4k.jpg",

@@ -2,13 +2,15 @@
   "name": "sessionmap",
   "private": true,
   "scripts": {
+    "dl-textures": "node scripts/download-textures.mjs",
+    "dl-railroads": "node scripts/download-railroads.mjs",
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "type-check": "turbo run type-check",
-    "dl-textures": "node scripts/download-textures.mjs"
+    "type-check": "turbo run type-check"
   },
   "devDependencies": {
+    "eslint": "^9",
     "turbo": "^2.0.0",
     "typescript": "^5.4.0"
   },
