@@ -2,6 +2,7 @@
   "name": "sessionmap",
   "private": true,
   "scripts": {
+    "dl-roads": "node scripts/download-roads.mjs",
     "dl-textures": "node scripts/download-textures.mjs",
     "dl-railroads": "node scripts/download-railroads.mjs",
     "dev": "turbo run dev",

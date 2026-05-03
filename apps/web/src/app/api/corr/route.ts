@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { yahooFetch } from "@/lib/yahoo-finance";
+import { NextResponse } from "next/server";
 
 // Fetch daily closes from Yahoo Finance v8 chart API
 async function fetchDailyCloses(symbol: string, days = 32): Promise<number[]> {
@@ -42,8 +42,17 @@ export async function GET() {
         },
       },
     );
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: msg }, { status: 502 });
+  } catch {
+    // Yahoo Finance is unavailable or rate-limiting — return empty arrays so
+    // the client shows "n/a" instead of a 502 error in the console.
+    return NextResponse.json(
+      { btc: [], qqq: [] },
+      {
+        headers: {
+          // short cache so a subsequent request can try again in 5 min
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60",
+        },
+      },
+    );
   }
 }
