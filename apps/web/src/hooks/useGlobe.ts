@@ -278,12 +278,13 @@ export function useGlobe(
       const loader = new THREE.TextureLoader();
       const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
       // Texture priority:
-      //   day  → local topo (run `pnpm dl-textures` to download) → local blue marble → CDN topo → CDN blue marble
-      //   night → local 4K city lights → CDN 4K → CDN standard
+      //   day  → local 8K clean daymap (Solar System Scope style, no ocean relief noise)
+      //          → local topo 4K → CDN blue marble
+      //   night → local 8K city lights → CDN fallbacks
       const dayURLs = [
-        "/textures/earth-topo-4k.jpg", // preferred: NASA topo+bathy (political colors, terrain, oceans)
-        "/textures/earth-day-4k.jpg", // fallback: existing blue marble
-        "https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73909/world.topo.bathy.200412.3x5400x2700.jpg",
+        "/textures/earth-day-8k.jpg",  // preferred: 8K clean day — no ocean/land relief noise
+        "/textures/earth-topo-4k.jpg", // fallback: NASA topo+bathy 5400×2700
+        "/textures/earth-day-4k.jpg",  // legacy blue marble fallback
         "https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg",
       ];
       const nightURLs = [

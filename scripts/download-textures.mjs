@@ -6,11 +6,12 @@
  *  node scripts/download-textures.mjs
  *
  * Textures downloaded:
- *  earth-topo-4k.jpg   — NASA Blue Marble: Topography + Bathymetry (5400×2700)
- *                         Shows terrain relief, political-style land colors, ocean depth
- *  earth-night-4k.jpg  — NASA Black Marble: city lights at night (5400×2700)
+ *  earth-day-8k.jpg    — Solar System Scope 8K day map — clean land colors, flat ocean blue,
+ *                         no ocean floor relief noise (CC BY 4.0)
+ *  earth-topo-4k.jpg   — NASA Topo + Bathymetry 5400×2700 (fallback)
+ *  earth-night-4k.jpg  — Solar System Scope 8K night map — city lights (CC BY 4.0)
  *
- * Source: NASA Visible Earth — public domain, no attribution required for non-commercial.
+ * Sources: solarsystemscope.com (CC BY 4.0), NASA Visible Earth (public domain).
  */
 
 import fs from "fs";
@@ -24,12 +25,26 @@ const DEST = path.join(__dirname, "../apps/web/public/textures");
 
 const TEXTURES = [
   {
+    filename: "earth-day-8k.jpg",
+    // Same source/style as night texture: clean colors, no relief noise, 8K
+    minSizeMB: 3,
+    urls: [
+      // Solar System Scope 8K day map (CC BY 4.0) — clean land colors, flat ocean, no noise
+      "https://www.solarsystemscope.com/textures/download/8k_earth_daymap.jpg",
+      // NASA Blue Marble Next Generation — clean, no topo/bathy shading, 5400×2700
+      "https://eoimages.gsfc.nasa.gov/images/imagerecords/76000/76487/world.200406.3x5400x2700.jpg",
+      // CDN fallback
+      "https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg",
+    ],
+    description: "Solar System Scope 8K day map — clean, no ocean relief",
+  },
+  {
     filename: "earth-topo-4k.jpg",
     urls: [
-      // NASA Visible Earth — Topography + Bathymetry, April 2004, 5400×2700
+      // NASA Visible Earth — Topography + Bathymetry, April 2004, 5400×2700 (kept as fallback)
       "https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73909/world.topo.bathy.200412.3x5400x2700.jpg",
     ],
-    description: "NASA Topo + Bathymetry (terrain relief + ocean depth)",
+    description: "NASA Topo + Bathymetry (terrain relief + ocean depth) — fallback only",
   },
   {
     filename: "earth-night-4k.jpg",
@@ -135,7 +150,9 @@ async function downloadWithFallbacks(tex) {
       await download(url, dest, tex.filename);
       const size = fs.statSync(dest).size;
       if (size < minBytes) {
-        console.warn(`  ⚠ Downloaded only ${(size / 1_048_576).toFixed(1)} MB (< ${tex.minSizeMB ?? 0.5} MB min) — trying next URL…`);
+        console.warn(
+          `  ⚠ Downloaded only ${(size / 1_048_576).toFixed(1)} MB (< ${tex.minSizeMB ?? 0.5} MB min) — trying next URL…`,
+        );
         continue;
       }
       console.log(`  ✓ ${(size / 1_048_576).toFixed(1)} MB`);
@@ -146,7 +163,9 @@ async function downloadWithFallbacks(tex) {
   }
 
   console.error(`  ✗ All URLs failed or all too small for ${tex.filename}`);
-  console.error(`    Using whatever was downloaded last — quality may be poor.`);
+  console.error(
+    `    Using whatever was downloaded last — quality may be poor.`,
+  );
 }
 
 console.log("SessionMap — texture downloader");
