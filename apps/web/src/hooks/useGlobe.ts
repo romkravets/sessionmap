@@ -623,6 +623,106 @@ export function useGlobe(
         }
       })().catch(() => {});
 
+      // ── Political country fill overlay ────────────────────────────────────
+      // Draws each country polygon on a canvas (equirectangular) then wraps it
+      // as a CanvasTexture on a sphere at r=1.001 with low opacity.
+      const POLITICAL_PALETTE = [
+        "#7dba8c", // green
+        "#6ea8d8", // blue
+        "#d4a84b", // gold
+        "#c47fa0", // rose
+        "#5fb8b0", // teal
+        "#d07848", // terracotta
+        "#9a80c8", // purple
+        "#88b85a", // lime
+        "#c09858", // amber
+        "#5888b8", // indigo
+        "#b05060", // crimson
+        "#4da894", // seafoam
+      ];
+
+      function countryColor(name: string): string {
+        let h = 0;
+        for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+        return POLITICAL_PALETTE[h % POLITICAL_PALETTE.length];
+      }
+
+      (async () => {
+        const urls = [
+          "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_110m_admin_0_countries.geojson",
+          "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json",
+        ];
+        type Ring = number[][];
+        type Poly = Ring[];
+        type CountryFeature = {
+          properties: { NAME?: string; name?: string };
+          geometry: { type: string; coordinates: unknown };
+        };
+
+        let features: CountryFeature[] | null = null;
+
+        for (const url of urls) {
+          try {
+            const res = await fetch(url);
+            if (!res.ok) continue;
+            const raw = await res.json() as Record<string, unknown>;
+            if (Array.isArray(raw["features"])) {
+              features = raw["features"] as CountryFeature[];
+              break;
+            }
+          } catch { continue; }
+        }
+        if (!features || !mounted) return;
+
+        const W = 4096, H = 2048;
+        const canvas = document.createElement("canvas");
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        function drawPolygon(rings: Poly, color: string) {
+          ctx!.fillStyle = color;
+          ctx!.beginPath();
+          for (const ring of rings) {
+            if (ring.length < 2) continue;
+            ctx!.moveTo(((ring[0][0] + 180) / 360) * W, ((90 - ring[0][1]) / 180) * H);
+            for (let i = 1; i < ring.length; i++) {
+              ctx!.lineTo(((ring[i][0] + 180) / 360) * W, ((90 - ring[i][1]) / 180) * H);
+            }
+            ctx!.closePath();
+          }
+          ctx!.fill();
+        }
+
+        for (const feature of features) {
+          const name = (feature.properties.NAME ?? feature.properties.name ?? "X") as string;
+          const color = countryColor(name);
+          const { type, coordinates } = feature.geometry as { type: string; coordinates: unknown };
+          if (type === "Polygon") {
+            drawPolygon(coordinates as Poly, color);
+          } else if (type === "MultiPolygon") {
+            for (const poly of coordinates as Poly[]) drawPolygon(poly, color);
+          }
+        }
+
+        if (!mounted) return;
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.needsUpdate = true;
+        const politicalMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(1.001, 128, 128),
+          new THREE.MeshBasicMaterial({
+            map: tex,
+            transparent: true,
+            opacity: 0.45,
+            depthWrite: false,
+            blending: THREE.NormalBlending,
+          }),
+        );
+        politicalMesh.renderOrder = 1;
+        scene.add(politicalMesh);
+        console.log("[Political] overlay added:", features.length, "countries");
+      })().catch((e) => console.error("[Political] failed:", e));
+
       // ── Rivers (Natural Earth 50m) ────────────────────────────────────────
       interface RiversGeoJSON {
         features: Array<{
