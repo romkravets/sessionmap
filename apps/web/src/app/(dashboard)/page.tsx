@@ -38,6 +38,13 @@ const WorldCapitals = dynamic(
     import("@/components/globe/WorldCapitals").then((m) => m.WorldCapitals),
   { ssr: false },
 );
+const EconomicOverlay = dynamic(
+  () =>
+    import("@/components/globe/EconomicOverlay").then(
+      (m) => m.EconomicOverlay,
+    ),
+  { ssr: false },
+);
 const CleanUI = dynamic(
   () => import("@/components/panels/CleanUI").then((m) => m.CleanUI),
   { ssr: false },
@@ -132,6 +139,7 @@ function SessionMapApp() {
         />
         <StockMarketLabels />
         <WorldCapitals />
+        <EconomicOverlay />
 
         {terminalMode ? (
           <TerminalUI
