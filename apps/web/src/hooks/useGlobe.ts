@@ -1,10 +1,15 @@
 "use client";
 
+import {
+  EXCHANGES,
+  SESSION_COLORS_HEX,
+  STOCK_MARKETS,
+  TWEAK_DEFAULTS,
+} from "@/lib/constants";
+import { getSunLatLng } from "@/lib/session-logic";
+import type { GlobeMode, TweakValues } from "@sessionmap/types";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import { EXCHANGES, SESSION_COLORS_HEX, TWEAK_DEFAULTS } from "@/lib/constants";
-import { getSunLatLng } from "@/lib/session-logic";
-import type { GlobeMode, WhaleEvent, TweakValues } from "@sessionmap/types";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function latLngToVec3(lat: number, lng: number, r = 1): THREE.Vector3 {
@@ -77,6 +82,7 @@ const FRAG = /* glsl */ `
   uniform sampler2D nightTex;
   uniform vec3 sunDir;
   uniform bool hasTextures;
+  uniform float u_declination; // solar declination in degrees (-23.45..+23.45)
   varying vec2 vUv;
   varying vec3 vNormal;
 
@@ -87,6 +93,15 @@ const FRAG = /* glsl */ `
 
     float dayBlend   = smoothstep(-0.05, 0.15, d);
     float nightBlend = smoothstep(0.08, -0.08, d);
+
+    // Seasonal calculations (used to modulate polar whiteness and tint)
+    // vUv.y: 0=south pole, 1=north pole. lat_frac: -1..+1
+    float lat_frac = (vUv.y - 0.5) * 2.0;              // -1(S) .. +1(N)
+    float dec_norm  = u_declination / 23.45;           // -1..+1 (neg=SH summer)
+    // seasonal: +1 where it's summer on this hemisphere, -1 where it's winter
+    float seasonal  = lat_frac * dec_norm;             // +1 summer side, -1 winter side
+    // winterFactor: 1.0 on winter side, 0.0 on summer side
+    float winterFactor = clamp(-seasonal, 0.0, 1.0);
 
     vec4 day, night;
     if (hasTextures) {
@@ -102,7 +117,9 @@ const FRAG = /* glsl */ `
       land = smoothstep(0.18, 0.42, land);
       float polar = smoothstep(0.75, 0.95, abs(vUv.y * 2.0 - 1.0));
       vec3 dayRGB = mix(vec3(0.04, 0.16, 0.42), vec3(0.14, 0.30, 0.12), land);
-      dayRGB = mix(dayRGB, vec3(0.75, 0.83, 0.88), polar);
+      // Modulate polar whiteness by winterFactor so summer hemisphere shows less snow
+      // baseline keeps a small polar tint even in summer (0.15), winterFactor scales up to full
+      dayRGB = mix(dayRGB, vec3(0.75, 0.83, 0.88), polar * (0.15 + 0.85 * winterFactor));
       day   = vec4(dayRGB, 1.0);
       night = vec4(mix(vec3(0.01, 0.03, 0.10), vec3(0.22, 0.18, 0.04), land) * nightBlend * 2.0, 1.0);
     }
@@ -111,6 +128,13 @@ const FRAG = /* glsl */ `
     float termGlow = exp(-abs(d) * 12.0) * 0.22;
     col = mix(col, vec3(0.85, 0.42, 0.12), termGlow * (1.0 - dayBlend * 0.7));
     col += (1.0 - nightBlend) * (1.0 - dayBlend) * 0.012;
+
+    // Subtle season tint: warm in summer hemisphere, cool in winter hemisphere.
+    float warmTint  = clamp(seasonal, 0.0, 1.0) * 0.055 * dayBlend;
+    float coolTint  = clamp(-seasonal, 0.0, 1.0) * 0.04 * dayBlend;
+    col += vec3(warmTint * 0.9, warmTint * 0.4, 0.0);   // warm amber in summer hemi
+    col -= vec3(coolTint * 0.1, coolTint * 0.1, 0.0);   // very subtle desaturate in winter
+
     gl_FragColor = vec4(col, 1.0);
   }
 `;
@@ -236,10 +260,12 @@ export function useGlobe(
         nightTex: { value: null as THREE.Texture | null },
         sunDir: { value: new THREE.Vector3(1, 0.2, 0.3).normalize() },
         hasTextures: { value: false },
+        u_declination: { value: 0.0 },
       };
 
       const globeMesh = new THREE.Mesh(
-        new THREE.SphereGeometry(1, 72, 72),
+        // increase segments to reduce visible texelation when sampling night textures
+        new THREE.SphereGeometry(1, 256, 256),
         new THREE.ShaderMaterial({
           vertexShader: VERT,
           fragmentShader: FRAG,
@@ -251,15 +277,20 @@ export function useGlobe(
       // ── Texture loading ───────────────────────────────────────────────────
       const loader = new THREE.TextureLoader();
       const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+      // Texture priority:
+      //   day  → local topo (run `pnpm dl-textures` to download) → local blue marble → CDN topo → CDN blue marble
+      //   night → local 4K city lights → CDN 4K → CDN standard
       const dayURLs = [
-        "https://unpkg.com/three-globe@2.34.1/example/img/earth-blue-marble.jpg",  // newer version, higher quality
+        "/textures/earth-topo-4k.jpg", // preferred: NASA topo+bathy (political colors, terrain, oceans)
+        "/textures/earth-day-4k.jpg", // fallback: existing blue marble
+        "https://eoimages.gsfc.nasa.gov/images/imagerecords/73000/73909/world.topo.bathy.200412.3x5400x2700.jpg",
         "https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg",
-        "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_atmos_2048.jpg",
       ];
       const nightURLs = [
-        "https://unpkg.com/three-globe@2.34.1/example/img/earth-night.jpg",
+        "/textures/earth-night-4k.jpg",
+        "https://unpkg.com/three-globe@2.31.1/example/img/earth-night-4k.jpg",
+        "https://cdn.jsdelivr.net/npm/three-globe@2.31.1/example/img/earth-night-4k.jpg",
         "https://unpkg.com/three-globe@2.31.1/example/img/earth-night.jpg",
-        "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_lights_2048.png",
       ];
 
       let dayLoaded = false,
@@ -280,11 +311,49 @@ export function useGlobe(
         loader.load(
           urls[0],
           (t) => {
+            // Ensure textures are power-of-two so mipmaps can be generated.
+            // If not, draw into a power-of-two canvas and create a CanvasTexture.
+            const img = t.image as HTMLImageElement | HTMLCanvasElement | null;
+            const isPOT = (n: number) => (n & (n - 1)) === 0;
+
+            let tex: THREE.Texture = t;
+            if (img && typeof (img as HTMLImageElement).width === "number") {
+              const w = (img as HTMLImageElement).width;
+              const h = (img as HTMLImageElement).height;
+              if (!isPOT(w) || !isPOT(h)) {
+                // choose next power-of-two >= original size to preserve detail
+                const nextPow2 = (n: number) =>
+                  Math.pow(2, Math.ceil(Math.log2(Math.max(1, n))));
+                const nw = Math.min(8192, nextPow2(w));
+                const nh = Math.min(8192, nextPow2(h));
+                try {
+                  const canvas = document.createElement("canvas");
+                  canvas.width = nw;
+                  canvas.height = nh;
+                  const ctx = canvas.getContext("2d");
+                  if (ctx) {
+                    // draw into canvas with smoothing enabled
+                    ctx.imageSmoothingEnabled = true;
+                    ctx.drawImage(img as CanvasImageSource, 0, 0, nw, nh);
+                    const canvasTex = new THREE.CanvasTexture(canvas);
+                    canvasTex.anisotropy = maxAnisotropy;
+                    canvasTex.minFilter = THREE.LinearMipmapLinearFilter;
+                    canvasTex.magFilter = THREE.LinearFilter;
+                    canvasTex.generateMipmaps = true;
+                    canvasTex.needsUpdate = true;
+                    tex = canvasTex;
+                  }
+                } catch (e) {
+                  // fallback to original texture on any error
+                  tex = t;
+                }
+              }
+            }
             // Anisotropic filtering eliminates pixelation at oblique angles (equator)
-            t.anisotropy = maxAnisotropy;
-            t.minFilter = THREE.LinearMipmapLinearFilter;
-            t.magFilter = THREE.LinearFilter;
-            uniform.value = t;
+            tex.anisotropy = maxAnisotropy;
+            tex.minFilter = THREE.LinearMipmapLinearFilter;
+            tex.magFilter = THREE.LinearFilter;
+            uniform.value = tex;
             onDone();
           },
           undefined,
@@ -375,6 +444,278 @@ export function useGlobe(
       );
       scene.add(sunMarker, sunGlow);
 
+      // ── Country borders (political map) ──────────────────────────────────
+      const borderGroup = new THREE.Group();
+      scene.add(borderGroup);
+
+      interface TopoJSON {
+        transform: { scale: [number, number]; translate: [number, number] };
+        arcs: number[][][];
+      }
+      fetch("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json")
+        .then((r) => r.json())
+        .then((topo: TopoJSON) => {
+          if (!mounted) return; // Component unmounted before fetch resolved — skip
+          const { scale, translate } = topo.transform;
+          const pts: THREE.Vector3[] = [];
+          for (const arc of topo.arcs) {
+            let x = 0,
+              y = 0;
+            const coords: [number, number][] = arc.map(([dx, dy]) => {
+              x += dx;
+              y += dy;
+              return [x * scale[0] + translate[0], y * scale[1] + translate[1]];
+            });
+            for (let i = 0; i < coords.length - 1; i++) {
+              pts.push(
+                // Slightly raised (1.004) so depth buffer reliably shows above globe
+                latLngToVec3(coords[i][1], coords[i][0], 1.004),
+                latLngToVec3(coords[i + 1][1], coords[i + 1][0], 1.004),
+              );
+            }
+          }
+          borderGroup.add(
+            new THREE.LineSegments(
+              new THREE.BufferGeometry().setFromPoints(pts),
+              new THREE.LineBasicMaterial({
+                color: 0x6699bb, // muted steel-blue — political map style
+                transparent: true,
+                opacity: 0.35,
+                depthWrite: false,
+                depthTest: true,
+              }),
+            ),
+          );
+        })
+        .catch(() => {}); // Gracefully skip if CDN unreachable
+
+      // ── Rivers (Natural Earth 50m) ────────────────────────────────────────
+      interface RiversGeoJSON {
+        features: Array<{
+          geometry: {
+            type: "LineString" | "MultiLineString";
+            coordinates: number[][] | number[][][];
+          };
+        }>;
+      }
+      const riverGroup = new THREE.Group();
+      scene.add(riverGroup);
+
+      fetch(
+        "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@v5.1.2/geojson/ne_50m_rivers_lake_centerlines.geojson",
+      )
+        .then((r) => r.json())
+        .then((geo: RiversGeoJSON) => {
+          if (!mounted) return;
+          const pts: THREE.Vector3[] = [];
+          for (const feature of geo.features) {
+            const { type, coordinates } = feature.geometry;
+            const lines: number[][][] =
+              type === "MultiLineString"
+                ? (coordinates as number[][][])
+                : [coordinates as number[][]];
+            for (const line of lines) {
+              for (let i = 0; i < line.length - 1; i++) {
+                pts.push(
+                  // slightly above globe so rivers appear on top of texture
+                  latLngToVec3(line[i][1], line[i][0], 1.003),
+                  latLngToVec3(line[i + 1][1], line[i + 1][0], 1.003),
+                );
+              }
+            }
+          }
+          riverGroup.add(
+            new THREE.LineSegments(
+              new THREE.BufferGeometry().setFromPoints(pts),
+              new THREE.LineBasicMaterial({
+                color: 0x3a8fc8, // blue rivers
+                transparent: true,
+                opacity: 0.5,
+                depthWrite: false,
+                depthTest: true,
+              }),
+            ),
+          );
+        })
+        .catch(() => {}); // Gracefully skip if CDN unreachable
+
+      // ── Major railways (Natural Earth 10m simplified) ─────────────────────
+      interface RailGeoJSON {
+        features: Array<{
+          geometry: {
+            type: "LineString" | "MultiLineString";
+            coordinates: number[][] | number[][][];
+          };
+        }>;
+      }
+      const railGroup = new THREE.Group();
+      scene.add(railGroup);
+
+      fetch(
+        "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@v5.1.2/geojson/ne_10m_railroads.geojson",
+      )
+        .then((r) => r.json())
+        .then((geo: RailGeoJSON) => {
+          if (!mounted) return;
+          const pts: THREE.Vector3[] = [];
+          for (const feature of geo.features) {
+            const { type, coordinates } = feature.geometry;
+            const lines: number[][][] =
+              type === "MultiLineString"
+                ? (coordinates as number[][][])
+                : [coordinates as number[][]];
+            for (const line of lines) {
+              for (let i = 0; i < line.length - 1; i++) {
+                pts.push(
+                  latLngToVec3(line[i][1], line[i][0], 1.002),
+                  latLngToVec3(line[i + 1][1], line[i + 1][0], 1.002),
+                );
+              }
+            }
+          }
+          railGroup.add(
+            new THREE.LineSegments(
+              new THREE.BufferGeometry().setFromPoints(pts),
+              new THREE.LineBasicMaterial({
+                color: 0xb06020, // warm brown — railway colour convention
+                transparent: true,
+                opacity: 0.35,
+                depthWrite: false,
+                depthTest: true,
+              }),
+            ),
+          );
+        })
+        .catch(() => {}); // 10m data is large — silently skip if too slow
+
+      // ── Major shipping / trade routes ─────────────────────────────────────
+      const TRADE_LANES: Array<{ waypoints: [number, number][] }> = [
+        // Trans-Pacific: Los Angeles → Yokohama
+        {
+          waypoints: [
+            [33.7, -118.2],
+            [35, -152],
+            [35.5, 139.6],
+          ],
+        },
+        // Asia-Europe via Suez: Shanghai → Rotterdam
+        {
+          waypoints: [
+            [31.2, 121.5],
+            [1.3, 103.8],
+            [12.8, 43.1],
+            [29.9, 32.5],
+            [36.8, 10.0],
+            [37.9, 23.7],
+            [41.0, 28.9],
+            [51.9, 4.5],
+          ],
+        },
+        // Trans-Atlantic: New York → Southampton
+        {
+          waypoints: [
+            [40.7, -74.0],
+            [47.0, -38.0],
+            [50.9, -1.4],
+          ],
+        },
+        // Cape route: Shanghai → Rotterdam around Africa
+        {
+          waypoints: [
+            [31.2, 121.5],
+            [-6.0, 39.6],
+            [-34.4, 18.5],
+            [5.0, -8.0],
+            [51.9, 4.5],
+          ],
+        },
+        // Indian Ocean: Singapore → Mumbai → Gulf of Aden
+        {
+          waypoints: [
+            [1.3, 103.8],
+            [8.0, 78.0],
+            [19.1, 72.9],
+            [12.8, 43.1],
+          ],
+        },
+        // Trans-Pacific South: Sydney → Los Angeles
+        {
+          waypoints: [
+            [-33.9, 151.2],
+            [-18.0, -155.0],
+            [33.7, -118.2],
+          ],
+        },
+        // Americas: Buenos Aires → New York
+        {
+          waypoints: [
+            [-34.6, -58.4],
+            [10.5, -66.9],
+            [40.7, -74.0],
+          ],
+        },
+      ];
+
+      const tradeGroup = new THREE.Group();
+      scene.add(tradeGroup);
+      const tradeMaterials: THREE.LineDashedMaterial[] = [];
+
+      TRADE_LANES.forEach((lane) => {
+        const pts: THREE.Vector3[] = [];
+        for (let s = 0; s < lane.waypoints.length - 1; s++) {
+          const [lat1, lng1] = lane.waypoints[s];
+          const [lat2, lng2] = lane.waypoints[s + 1];
+          const p1 = latLngToVec3(lat1, lng1, 1);
+          const p2 = latLngToVec3(lat2, lng2, 1);
+          pts.push(...greatCircleArc(p1, p2, 0.0, 40));
+        }
+        const geo = new THREE.BufferGeometry().setFromPoints(pts);
+        const mat = new THREE.LineDashedMaterial({
+          color: 0xc8972a,
+          transparent: true,
+          opacity: 0.38,
+          dashSize: 0.035,
+          gapSize: 0.018,
+          depthWrite: false,
+        });
+        const tradeLine = new THREE.Line(geo, mat);
+        (
+          tradeLine as unknown as { computeLineDistances: () => void }
+        ).computeLineDistances();
+        tradeGroup.add(tradeLine);
+        tradeMaterials.push(mat);
+      });
+
+      // ── Stock market 3D markers (squares, higher orbit than crypto circles) ─
+      const stockGroup = new THREE.Group();
+      scene.add(stockGroup);
+      const stockMeshes: { mesh: THREE.Mesh; phase: number }[] = [];
+
+      STOCK_MARKETS.forEach((market) => {
+        const pos = latLngToVec3(market.lat, market.lng, 1.017);
+        const col = new THREE.Color(market.color);
+        const sq = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.02, 0.02),
+          new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide }),
+        );
+        // Outer square ring
+        const sqRing = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.036, 0.036),
+          new THREE.MeshBasicMaterial({
+            color: col,
+            transparent: true,
+            opacity: 0.2,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+          }),
+        );
+        sq.position.copy(pos);
+        sqRing.position.copy(pos);
+        stockGroup.add(sq, sqRing);
+        stockMeshes.push({ mesh: sq, phase: Math.random() * Math.PI * 2 });
+        stockMeshes.push({ mesh: sqRing, phase: Math.random() * Math.PI * 2 });
+      });
+
       // ── Exchange markers ──────────────────────────────────────────────────
       const markerGroup = new THREE.Group();
       scene.add(markerGroup);
@@ -409,7 +750,12 @@ export function useGlobe(
         dot.position.copy(pos);
         ring.position.copy(pos);
         markerGroup.add(dot, ring);
-        markerMeshes.push({ dot, ring, phase: Math.random() * Math.PI * 2, ex });
+        markerMeshes.push({
+          dot,
+          ring,
+          phase: Math.random() * Math.PI * 2,
+          ex,
+        });
       });
 
       // ── Globe projection (shared with React overlay) ───────────────────
@@ -606,6 +952,7 @@ export function useGlobe(
         const sunVec = latLngToVec3(sunLL.lat, sunLL.lng, 1).normalize();
         // sunDir stays world-space — normals in both shaders are now world-space too
         uniforms.sunDir.value.copy(sunVec);
+        uniforms.u_declination.value = sunLL.lat;
         // Keep atmosphere camera position in sync
         atmoUniforms.cameraWorldPos.value.copy(camera.position);
 
@@ -656,6 +1003,18 @@ export function useGlobe(
             0.35 * (2.2 - s) * 0.5;
         });
 
+        // Billboard stock market squares
+        stockMeshes.forEach((m) => {
+          m.mesh.quaternion.copy(camera.quaternion);
+        });
+
+        // Animate trade route dash flow (golden ant march effect)
+        tradeMaterials.forEach((mat) => {
+          (
+            mat as THREE.LineDashedMaterial & { dashOffset: number }
+          ).dashOffset -= dt * 0.04;
+        });
+
         // auto-spawn arcs when no WS (fallback mode)
         nextSpawn -= dt;
         if (nextSpawn <= 0) {
@@ -683,6 +1042,7 @@ export function useGlobe(
         cancelAnimationFrame(animId);
         window.removeEventListener("resize", onResize);
         renderer.dispose();
+        tradeMaterials.forEach((m) => m.dispose());
         delete window.globeProject;
         delete window.globeState;
         delete window.onWhaleArc;

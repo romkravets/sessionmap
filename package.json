@@ -5,7 +5,8 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "type-check": "turbo run type-check"
+    "type-check": "turbo run type-check",
+    "dl-textures": "node scripts/download-textures.mjs"
   },
   "devDependencies": {
     "turbo": "^2.0.0",

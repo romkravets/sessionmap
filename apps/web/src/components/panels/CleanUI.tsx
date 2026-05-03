@@ -1,21 +1,22 @@
 "use client";
 
-import { memo } from "react";
-import type {
-  SessionInfo,
-  PriceSnapshot,
-  GlobeMode,
-  WhaleEvent,
-  MarketMeta,
-  EthGas,
-  CommodityData,
-} from "@sessionmap/types";
 import { SESSION_COLORS_CSS, SESSION_LABELS } from "@/lib/constants";
 import { formatCountdown } from "@/lib/session-logic";
-import { GlobeModeBar } from "./GlobeModeBar";
-import { WhaleTicker } from "./WhaleTicker";
-import { SessionVolumeBars } from "./SessionVolumeBars";
+import type {
+  CommodityData,
+  EthGas,
+  GlobeMode,
+  MarketMeta,
+  PriceSnapshot,
+  SessionInfo,
+  WhaleEvent,
+} from "@sessionmap/types";
+import { memo } from "react";
 import { AltcoinSeasonBadge } from "./AltcoinSeasonBadge";
+import { GlobeModeBar } from "./GlobeModeBar";
+import { SeasonWidget } from "./SeasonWidget";
+import { SessionVolumeBars } from "./SessionVolumeBars";
+import { WhaleTicker } from "./WhaleTicker";
 
 interface CleanUIProps {
   session: SessionInfo;
@@ -548,27 +549,74 @@ export const CleanUI = memo(function CleanUI({
 
           {/* Commodity Prices */}
           {commodities && (
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px', marginTop: '8px' }}>
-              <div style={{ fontSize: '9px', color: 'var(--fg-dim)', fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: '6px' }}>
+            <div
+              style={{
+                borderTop: "1px solid rgba(255,255,255,0.06)",
+                paddingTop: "8px",
+                marginTop: "8px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "9px",
+                  color: "var(--fg-dim)",
+                  fontFamily: "monospace",
+                  letterSpacing: "0.1em",
+                  marginBottom: "6px",
+                }}
+              >
                 COMMODITIES
               </div>
               {[
-                { label: 'GOLD', data: commodities.gold },
-                { label: 'OIL',  data: commodities.oil },
-                { label: 'GAS',  data: commodities.gas },
-              ].filter(c => c.data).map(({ label, data }) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <span style={{ fontSize: '10px', color: 'var(--fg-muted)', fontFamily: 'monospace' }}>{label}</span>
-                  <span style={{ fontSize: '10px', fontFamily: 'monospace', color: (data!.changePercent >= 0) ? '#34d399' : '#f87171' }}>
-                    ${data!.price.toFixed(2)}
-                    <span style={{ fontSize: '8px', marginLeft: '4px', opacity: 0.8 }}>
-                      {data!.changePercent >= 0 ? '+' : ''}{data!.changePercent.toFixed(2)}%
+                { label: "GOLD", data: commodities.gold },
+                { label: "OIL", data: commodities.oil },
+                { label: "GAS", data: commodities.gas },
+              ]
+                .filter((c) => c.data)
+                .map(({ label, data }) => (
+                  <div
+                    key={label}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginBottom: "4px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        color: "var(--fg-muted)",
+                        fontFamily: "monospace",
+                      }}
+                    >
+                      {label}
                     </span>
-                  </span>
-                </div>
-              ))}
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        fontFamily: "monospace",
+                        color: data!.changePercent >= 0 ? "#34d399" : "#f87171",
+                      }}
+                    >
+                      ${data!.price.toFixed(2)}
+                      <span
+                        style={{
+                          fontSize: "8px",
+                          marginLeft: "4px",
+                          opacity: 0.8,
+                        }}
+                      >
+                        {data!.changePercent >= 0 ? "+" : ""}
+                        {data!.changePercent.toFixed(2)}%
+                      </span>
+                    </span>
+                  </div>
+                ))}
             </div>
           )}
+
+          {/* Earth Seasons */}
+          <SeasonWidget />
         </div>
       </div>
     </div>

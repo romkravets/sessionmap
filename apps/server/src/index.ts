@@ -61,11 +61,15 @@ app.use("/api", healthRouter);
 // ── HTTP + WS server ──────────────────────────────────────────────────────────
 const server = http.createServer(app);
 
+const isDev = process.env.NODE_ENV !== "production";
+
 const wss = new WebSocketServer({
   server,
-  // Only accept connections from our client origin
   verifyClient: ({ origin }, cb) => {
-    const allowed = !origin || origin === CLIENT_ORIGIN;
+    // In dev accept any localhost origin (port varies across restarts)
+    const allowed = !origin
+      || (isDev && /^https?:\/\/localhost(:\d+)?$/.test(origin))
+      || origin === CLIENT_ORIGIN;
     cb(allowed, 403, "Forbidden origin");
   },
 });

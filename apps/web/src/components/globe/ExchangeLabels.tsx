@@ -112,6 +112,37 @@ export const ExchangeLabels = memo(function ExchangeLabels({
               zIndex: isHovered ? 100 : Math.floor(ex.vol),
             }}
           >
+            {/* Amber outer halo — marks all crypto exchanges, visually distinct from blue STOCK squares */}
+            <div style={{
+              position: "absolute",
+              width: (tier === 1 ? 14 : tier === 2 ? 11 : 8) + 10,
+              height: (tier === 1 ? 14 : tier === 2 ? 11 : 8) + 10,
+              borderRadius: "50%",
+              border: `1px solid rgba(251,176,64,${isHovered ? 0.5 : 0.18})`,
+              top: "50%", left: "50%",
+              transform: "translate(-50%,-50%)",
+              pointerEvents: "none",
+              transition: "border-color 0.2s",
+            }} />
+
+            {/* CRYPTO badge — always visible for tier 1 */}
+            {tier === 1 && !isHovered && (
+              <div style={{
+                position: "absolute",
+                left: "50%",
+                top: "-32px",
+                transform: "translateX(-50%)",
+                fontSize: "7px",
+                fontFamily: "var(--font-mono, monospace)",
+                color: "rgba(251,176,64,0.5)",
+                letterSpacing: "0.08em",
+                whiteSpace: "nowrap",
+                pointerEvents: "none",
+              }}>
+                ₿
+              </div>
+            )}
+
             {/* Marker: tier 1/2 = ring + dot, tier 3 = dot only */}
             <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {/* Outer ring (tier 1 & 2 only) */}

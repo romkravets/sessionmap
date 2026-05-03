@@ -105,7 +105,23 @@ export const StockMarketLabels = memo(function StockMarketLabels() {
               zIndex: isHov ? 150 : 20,
             }}
           >
-            {/* Diamond marker — visually distinct from crypto circles */}
+            {/* STOCK badge — always visible above diamond, clearly labels this as traditional exchange */}
+            <div style={{
+              position: "absolute",
+              left: "50%",
+              top: "-18px",
+              transform: "translateX(-50%)",
+              fontSize: "7px",
+              fontFamily: "var(--font-mono, monospace)",
+              color: open ? `${col}99` : "rgba(255,255,255,0.2)",
+              letterSpacing: "0.1em",
+              whiteSpace: "nowrap",
+              pointerEvents: "none",
+            }}>
+              STK
+            </div>
+
+            {/* Diamond marker — square shape = STOCK, circle = CRYPTO, white diamond = CAPITAL */}
             <div
               style={{
                 width: diamondSize,
