@@ -2,11 +2,41 @@
 
 import { useState, useEffect, useRef, memo } from "react";
 import { STOCK_MARKETS, isStockMarketOpen } from "@/lib/constants";
+import type { StockMarket } from "@/lib/constants";
 
 interface Position {
   x: number;
   y: number;
   visible: boolean;
+}
+
+/** Returns "Opens in Xh Ym" for a closed market, or "" if open / calculation fails */
+function getOpensIn(m: StockMarket, now: Date): string {
+  // Get current local decimal hour in the market's timezone
+  const parts = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+    timeZone: m.tz,
+  }).formatToParts(now);
+  const h   = parseInt(parts.find((p) => p.type === "hour")?.value   ?? "0");
+  const min = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0");
+  const localH = h + min / 60;
+
+  let diffH: number;
+  if (localH < m.openLocal) {
+    diffH = m.openLocal - localH;
+  } else {
+    // After close — next day open (add 24h wrap)
+    diffH = (m.openLocal + 24) - localH;
+  }
+
+  const totalMins = Math.round(diffH * 60);
+  const hours = Math.floor(totalMins / 60);
+  const mins  = totalMins % 60;
+  if (hours > 0 && mins > 0) return `Opens in ${hours}h ${mins}m`;
+  if (hours > 0)             return `Opens in ${hours}h`;
+  return `Opens in ${mins}m`;
 }
 
 export const StockMarketLabels = memo(function StockMarketLabels() {
@@ -57,6 +87,9 @@ export const StockMarketLabels = memo(function StockMarketLabels() {
         const isHov = hovered === market.id;
         const col = market.color;
 
+        // Diamond sizes: larger when open
+        const diamondSize = open ? 12 : 8;
+
         return (
           <div
             key={market.id}
@@ -75,15 +108,19 @@ export const StockMarketLabels = memo(function StockMarketLabels() {
             {/* Diamond marker — visually distinct from crypto circles */}
             <div
               style={{
-                width: 9,
-                height: 9,
+                width: diamondSize,
+                height: diamondSize,
                 background: open ? col : "transparent",
                 border: `2px solid ${col}`,
                 borderRadius: "2px",
                 transform: "rotate(45deg)",
                 opacity: open ? 1 : 0.3,
-                boxShadow: open ? `0 0 8px ${col}, 0 0 18px ${col}55` : "none",
-                transition: "opacity 0.6s, box-shadow 0.6s",
+                boxShadow: open
+                  ? isHov
+                    ? `0 0 14px ${col}, 0 0 28px ${col}66, 0 0 48px ${col}33`
+                    : `0 0 10px ${col}, 0 0 22px ${col}55`
+                  : "none",
+                transition: "opacity 0.6s, box-shadow 0.6s, width 0.3s, height 0.3s",
               }}
             />
 
@@ -92,7 +129,7 @@ export const StockMarketLabels = memo(function StockMarketLabels() {
               style={{
                 position: "absolute",
                 left: "50%",
-                top: "14px",
+                top: `${Math.ceil(diamondSize * 0.7) + 8}px`,
                 transform: "translateX(-50%)",
                 whiteSpace: "nowrap",
                 background: "rgba(8,11,20,0.88)",
@@ -132,7 +169,7 @@ export const StockMarketLabels = memo(function StockMarketLabels() {
                   position: "absolute",
                   left: "14px",
                   top: "-8px",
-                  width: "170px",
+                  width: "178px",
                   background: "rgba(8,11,20,0.97)",
                   border: `1px solid ${col}44`,
                   borderRadius: "8px",
@@ -142,6 +179,24 @@ export const StockMarketLabels = memo(function StockMarketLabels() {
                   boxShadow: `0 4px 20px rgba(0,0,0,0.6), 0 0 0 1px ${col}18`,
                 }}
               >
+                {/* STOCK badge */}
+                <div style={{ marginBottom: "5px" }}>
+                  <span
+                    style={{
+                      fontSize: "8px",
+                      background: `${col}22`,
+                      border: `1px solid ${col}44`,
+                      borderRadius: "3px",
+                      padding: "1px 5px",
+                      color: col,
+                      fontFamily: "monospace",
+                      letterSpacing: "0.1em",
+                    }}
+                  >
+                    STOCK
+                  </span>
+                </div>
+
                 <div
                   style={{
                     display: "flex",
@@ -188,6 +243,7 @@ export const StockMarketLabels = memo(function StockMarketLabels() {
                     fontSize: "9px",
                     color: "var(--fg-dim)",
                     fontFamily: "var(--font-mono, monospace)",
+                    marginBottom: open ? 0 : "5px",
                   }}
                 >
                   {market.openLocal.toFixed(0).padStart(2, "0")}:
@@ -196,6 +252,20 @@ export const StockMarketLabels = memo(function StockMarketLabels() {
                   {((market.closeLocal % 1) * 60).toFixed(0).padStart(2, "0")}{" "}
                   local · Mon–Fri
                 </div>
+
+                {/* "Opens in Xh Ym" row when closed */}
+                {!open && (
+                  <div
+                    style={{
+                      fontSize: "9px",
+                      color: col,
+                      fontFamily: "var(--font-mono, monospace)",
+                      opacity: 0.75,
+                    }}
+                  >
+                    {getOpensIn(market, new Date())}
+                  </div>
+                )}
               </div>
             )}
           </div>

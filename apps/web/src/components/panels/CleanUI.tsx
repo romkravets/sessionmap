@@ -8,6 +8,7 @@ import type {
   WhaleEvent,
   MarketMeta,
   EthGas,
+  CommodityData,
 } from "@sessionmap/types";
 import { SESSION_COLORS_CSS, SESSION_LABELS } from "@/lib/constants";
 import { formatCountdown } from "@/lib/session-logic";
@@ -31,6 +32,7 @@ interface CleanUIProps {
   alertCount?: number;
   /** Pearson r for BTC vs QQQ 30-day log-returns. null = still loading */
   btcQqqCorr?: number | null;
+  commodities?: CommodityData | null;
 }
 
 export const CleanUI = memo(function CleanUI({
@@ -47,6 +49,7 @@ export const CleanUI = memo(function CleanUI({
   onToggleAlerts,
   alertCount = 0,
   btcQqqCorr,
+  commodities,
 }: CleanUIProps) {
   const { active, nextEvent, volatility } = session;
 
@@ -542,6 +545,30 @@ export const CleanUI = memo(function CleanUI({
               </div>
             );
           })}
+
+          {/* Commodity Prices */}
+          {commodities && (
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px', marginTop: '8px' }}>
+              <div style={{ fontSize: '9px', color: 'var(--fg-dim)', fontFamily: 'monospace', letterSpacing: '0.1em', marginBottom: '6px' }}>
+                COMMODITIES
+              </div>
+              {[
+                { label: 'GOLD', data: commodities.gold },
+                { label: 'OIL',  data: commodities.oil },
+                { label: 'GAS',  data: commodities.gas },
+              ].filter(c => c.data).map(({ label, data }) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '10px', color: 'var(--fg-muted)', fontFamily: 'monospace' }}>{label}</span>
+                  <span style={{ fontSize: '10px', fontFamily: 'monospace', color: (data!.changePercent >= 0) ? '#34d399' : '#f87171' }}>
+                    ${data!.price.toFixed(2)}
+                    <span style={{ fontSize: '8px', marginLeft: '4px', opacity: 0.8 }}>
+                      {data!.changePercent >= 0 ? '+' : ''}{data!.changePercent.toFixed(2)}%
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

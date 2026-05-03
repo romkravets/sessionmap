@@ -20,6 +20,7 @@ import { startLiquidationsConnector } from "./connectors/LiquidationsConnector.j
 import { startFundingConnector } from "./connectors/FundingConnector.js";
 import { startEthGasConnector } from "./connectors/EthGasConnector.js";
 import { startWhaleService } from "./services/WhaleService.js";
+import { startCommodityConnector, getCachedCommodities } from "./connectors/CommodityConnector.js";
 
 const PORT = Number(process.env.PORT ?? 4000);
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN ?? "http://localhost:3000";
@@ -78,6 +79,7 @@ wss.on("connection", (ws) => {
     if (ws.readyState === ws.OPEN) {
       ws.send(JSON.stringify({ type: "prices", data: getPriceSnapshot() }));
       ws.send(JSON.stringify({ type: "meta", data: getCachedMeta() }));
+      ws.send(JSON.stringify({ type: "commodities", data: getCachedCommodities() }));
     }
   });
 });
@@ -101,6 +103,7 @@ startWhaleService();
 startLiquidationsConnector();
 startFundingConnector();
 startEthGasConnector();
+startCommodityConnector();
 
 // ── Start listening ───────────────────────────────────────────────────────────
 server.listen(PORT, () => {

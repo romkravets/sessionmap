@@ -33,6 +33,11 @@ const StockMarketLabels = dynamic(
     ),
   { ssr: false },
 );
+const WorldCapitals = dynamic(
+  () =>
+    import("@/components/globe/WorldCapitals").then((m) => m.WorldCapitals),
+  { ssr: false },
+);
 const CleanUI = dynamic(
   () => import("@/components/panels/CleanUI").then((m) => m.CleanUI),
   { ssr: false },
@@ -126,6 +131,7 @@ function SessionMapApp() {
           globeMode={globeMode}
         />
         <StockMarketLabels />
+        <WorldCapitals />
 
         {terminalMode ? (
           <TerminalUI
@@ -158,6 +164,7 @@ function SessionMapApp() {
             onToggleAlerts={() => setAlertsPanelOpen((p) => !p)}
             alertCount={alerts.length}
             btcQqqCorr={btcQqqCorr}
+            commodities={state.commodities}
           />
         )}
 

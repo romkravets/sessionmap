@@ -20,6 +20,7 @@ function generateWhale(): WhaleEvent {
     from: EXCHANGES[i1],
     to: EXCHANGES[i2],
     ts: Date.now(),
+    simulated: true,
   };
 }
 

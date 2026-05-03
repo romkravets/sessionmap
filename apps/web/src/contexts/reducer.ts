@@ -1,4 +1,4 @@
-import type { AppState, PriceSnapshot, MarketMeta, WhaleEvent, LiquidationEvent, FundingRateMap, EthGas, GlobeMode, TweakValues } from '@sessionmap/types'
+import type { AppState, PriceSnapshot, MarketMeta, WhaleEvent, LiquidationEvent, FundingRateMap, EthGas, CommodityData, GlobeMode, TweakValues } from '@sessionmap/types'
 import { TWEAK_DEFAULTS } from '@/lib/constants'
 
 export type Action =
@@ -8,6 +8,7 @@ export type Action =
   | { type: 'LIQUIDATION_EVENT'; payload: LiquidationEvent }
   | { type: 'FUNDING_UPDATE'; payload: FundingRateMap }
   | { type: 'GAS_UPDATE'; payload: EthGas }
+  | { type: 'COMMODITIES_UPDATE'; payload: CommodityData }
   | { type: 'SET_GLOBE_MODE'; payload: GlobeMode }
   | { type: 'TOGGLE_TERMINAL' }
   | { type: 'SET_TWEAK'; payload: Partial<TweakValues> }
@@ -26,6 +27,7 @@ export const initialState: AppState = {
   liquidations: [],
   fundingRates: {},
   ethGas: null,
+  commodities: null,
   globeMode: 'auto',
   terminalMode: false,
   tweaks: TWEAK_DEFAULTS,
@@ -62,6 +64,9 @@ export function reducer(state: AppState, action: Action): AppState {
 
     case 'GAS_UPDATE':
       return { ...state, ethGas: action.payload }
+
+    case 'COMMODITIES_UPDATE':
+      return { ...state, commodities: action.payload }
 
     case 'SET_GLOBE_MODE':
       return { ...state, globeMode: action.payload }

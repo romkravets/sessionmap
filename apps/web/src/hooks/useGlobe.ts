@@ -252,11 +252,12 @@ export function useGlobe(
       const loader = new THREE.TextureLoader();
       const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
       const dayURLs = [
-        // three-globe package ships this texture — reliable CDN
+        "https://unpkg.com/three-globe@2.34.1/example/img/earth-blue-marble.jpg",  // newer version, higher quality
         "https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg",
         "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_atmos_2048.jpg",
       ];
       const nightURLs = [
+        "https://unpkg.com/three-globe@2.34.1/example/img/earth-night.jpg",
         "https://unpkg.com/three-globe@2.31.1/example/img/earth-night.jpg",
         "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/earth_lights_2048.png",
       ];
@@ -381,29 +382,34 @@ export function useGlobe(
         dot: THREE.Mesh;
         ring: THREE.Mesh;
         phase: number;
+        ex: (typeof EXCHANGES)[0];
       }[] = [];
 
       EXCHANGES.forEach((ex) => {
-        const pos = latLngToVec3(ex.lat, ex.lng, 1.012);
-        const r = 0.008 + Math.log(ex.vol + 1) * 0.004;
+        const pos = latLngToVec3(ex.lat, ex.lng, 1.013);
+        const r = 0.007 + Math.log(ex.vol + 1) * 0.003;
         const col = new THREE.Color(SESSION_COLORS_HEX[ex.region]);
+
+        // Flat disk facing camera (billboard)
         const dot = new THREE.Mesh(
-          new THREE.SphereGeometry(r, 10, 10),
-          new THREE.MeshBasicMaterial({ color: col }),
+          new THREE.CircleGeometry(r, 16),
+          new THREE.MeshBasicMaterial({ color: col, side: THREE.DoubleSide }),
         );
+        // Flat ring facing camera (billboard)
         const ring = new THREE.Mesh(
-          new THREE.SphereGeometry(r * 2.5, 10, 10),
+          new THREE.RingGeometry(r * 1.8, r * 2.6, 24),
           new THREE.MeshBasicMaterial({
             color: col,
             transparent: true,
-            opacity: 0.2,
+            opacity: 0.35,
+            side: THREE.DoubleSide,
             depthWrite: false,
           }),
         );
         dot.position.copy(pos);
         ring.position.copy(pos);
         markerGroup.add(dot, ring);
-        markerMeshes.push({ dot, ring, phase: Math.random() * Math.PI * 2 });
+        markerMeshes.push({ dot, ring, phase: Math.random() * Math.PI * 2, ex });
       });
 
       // ── Globe projection (shared with React overlay) ───────────────────
@@ -635,7 +641,11 @@ export function useGlobe(
         controls.autoRotateSpeed = speed;
         controls.autoRotate = mode === "auto";
 
-        markerMeshes.forEach((m, idx) => {
+        markerMeshes.forEach((m) => {
+          // Billboard — always face camera
+          m.dot.quaternion.copy(camera.quaternion);
+          m.ring.quaternion.copy(camera.quaternion);
+
           if (!tweaks.markerPulse) {
             (m.ring.material as THREE.MeshBasicMaterial).opacity = 0;
             return;
@@ -643,7 +653,7 @@ export function useGlobe(
           const s = 1 + 0.5 * Math.sin(elapsed * 1.4 + m.phase);
           m.ring.scale.setScalar(s);
           (m.ring.material as THREE.MeshBasicMaterial).opacity =
-            0.18 * (2.2 - s);
+            0.35 * (2.2 - s) * 0.5;
         });
 
         // auto-spawn arcs when no WS (fallback mode)

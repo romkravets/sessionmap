@@ -60,6 +60,20 @@ export const WhaleTicker = memo(function WhaleTicker({ events }: WhaleTickerProp
             }}>
               {w.from} → {w.to}
             </span>
+            {w.simulated && (
+              <span style={{
+                fontSize: '7px',
+                padding: '1px 4px',
+                background: 'rgba(251,191,36,0.15)',
+                border: '1px solid rgba(251,191,36,0.4)',
+                borderRadius: '2px',
+                color: '#fbbf24',
+                fontFamily: 'monospace',
+                letterSpacing: '0.05em',
+                marginLeft: '4px',
+                verticalAlign: 'middle',
+              }}>SIM</span>
+            )}
           </div>
         )
       })}

@@ -32,6 +32,21 @@ function heatColor(vol: number): string {
   return "hsl(120, 60%, 40%)"; // dim green for low volume
 }
 
+function getExchangeTier(vol: number): 1 | 2 | 3 {
+  if (vol >= 20) return 1;
+  if (vol >= 5) return 2;
+  return 3;
+}
+
+function getSessionLabel(region: string): string {
+  switch (region) {
+    case "asia":     return "Asia Session";
+    case "europe":   return "Europe Session";
+    case "americas": return "Americas Session";
+    default:         return region.charAt(0).toUpperCase() + region.slice(1);
+  }
+}
+
 export const ExchangeLabels = memo(function ExchangeLabels({
   hoveredId,
   onHover,
@@ -69,19 +84,18 @@ export const ExchangeLabels = memo(function ExchangeLabels({
           globeMode === "heatmap"
             ? heatColor(displayVol)
             : SESSION_COLORS_HEX[ex.region];
-        const isLarge = ex.vol >= 18;
-        const isMed = ex.vol >= 6;
-        const dotSize =
+        const tier = getExchangeTier(displayVol);
+
+        // Tier-based sizes
+        const outerSize = tier === 1 ? 14 : tier === 2 ? 11 : 0;
+        const innerSize = tier === 1 ? 8 : tier === 2 ? 6 : 6;
+        const glowSize  = tier === 1 ? 16 : tier === 2 ? 10 : 6;
+
+        // Heatmap mode overrides dot size
+        const heatmapDotSize =
           globeMode === "heatmap"
-            ? Math.max(
-                5,
-                Math.min(14, Math.round((displayVol / MAX_STATIC_VOL) * 14)),
-              )
-            : isLarge
-              ? 10
-              : isMed
-                ? 7
-                : 5;
+            ? Math.max(5, Math.min(14, Math.round((displayVol / MAX_STATIC_VOL) * 14)))
+            : null;
 
         return (
           <div
@@ -98,21 +112,43 @@ export const ExchangeLabels = memo(function ExchangeLabels({
               zIndex: isHovered ? 100 : Math.floor(ex.vol),
             }}
           >
-            {/* Dot */}
-            <div
-              style={{
-                width: dotSize,
-                height: dotSize,
-                borderRadius: "50%",
-                background: col,
-                boxShadow: `0 0 ${isHovered ? 12 : globeMode === "heatmap" ? 8 : 6}px ${col}`,
-                margin: "auto",
-                transition: "box-shadow 0.2s, background 0.4s",
-              }}
-            />
+            {/* Marker: tier 1/2 = ring + dot, tier 3 = dot only */}
+            <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {/* Outer ring (tier 1 & 2 only) */}
+              {tier < 3 && globeMode !== "heatmap" && (
+                <div
+                  style={{
+                    position: "absolute",
+                    width: outerSize,
+                    height: outerSize,
+                    borderRadius: "50%",
+                    border: `1.5px solid ${col}`,
+                    opacity: isHovered ? 1 : 0.65,
+                    boxShadow: isHovered
+                      ? `0 0 ${tier === 1 ? 14 : 8}px ${col}, 0 0 ${tier === 1 ? 28 : 16}px ${col}44`
+                      : `0 0 ${tier === 1 ? 8 : 5}px ${col}88`,
+                    transition: "opacity 0.2s, box-shadow 0.2s",
+                  }}
+                />
+              )}
+              {/* Inner dot */}
+              <div
+                style={{
+                  width: heatmapDotSize ?? innerSize,
+                  height: heatmapDotSize ?? innerSize,
+                  borderRadius: "50%",
+                  background: col,
+                  boxShadow: isHovered
+                    ? `0 0 ${glowSize}px ${col}, 0 0 ${glowSize * 2}px ${col}55`
+                    : `0 0 ${tier === 1 ? 8 : tier === 2 ? 6 : 4}px ${col}${isHovered ? "" : "99"}`,
+                  transition: "box-shadow 0.2s, background 0.4s",
+                  flexShrink: 0,
+                }}
+              />
+            </div>
 
-            {/* Name label for large exchanges or hovered */}
-            {(isLarge || isHovered) && (
+            {/* Name label for tier-1 exchanges or hovered */}
+            {(tier === 1 || isHovered) && (
               <div
                 style={{
                   position: "absolute",
@@ -142,7 +178,7 @@ export const ExchangeLabels = memo(function ExchangeLabels({
                   position: "absolute",
                   left: "14px",
                   top: "-10px",
-                  width: "180px",
+                  width: "190px",
                   background: "rgba(8,11,20,0.97)",
                   border: `1px solid ${col}55`,
                   borderRadius: "8px",
@@ -152,6 +188,24 @@ export const ExchangeLabels = memo(function ExchangeLabels({
                   boxShadow: `0 4px 24px rgba(0,0,0,0.6), 0 0 0 1px ${col}22`,
                 }}
               >
+                {/* CRYPTO badge */}
+                <div style={{ marginBottom: "5px" }}>
+                  <span
+                    style={{
+                      fontSize: "8px",
+                      background: `${col}22`,
+                      border: `1px solid ${col}44`,
+                      borderRadius: "3px",
+                      padding: "1px 5px",
+                      color: col,
+                      fontFamily: "monospace",
+                      letterSpacing: "0.1em",
+                    }}
+                  >
+                    CRYPTO
+                  </span>
+                </div>
+
                 <div
                   style={{
                     display: "flex",
@@ -202,10 +256,9 @@ export const ExchangeLabels = memo(function ExchangeLabels({
                       ["24h Vol", `$${displayVol.toFixed(1)}B`],
                       ["Share", `${ex.share}%`],
                       ["Pairs", ex.pairs.toLocaleString()],
-                      [
-                        "Region",
-                        ex.region.charAt(0).toUpperCase() + ex.region.slice(1),
-                      ],
+                      ["Region", ex.region.charAt(0).toUpperCase() + ex.region.slice(1)],
+                      ["Status", getSessionLabel(ex.region)],
+                      ["Tier", `Tier ${tier}`],
                     ] as [string, string][]
                   ).map(([k, v]) => (
                     <span key={k} style={{ display: "contents" }}>

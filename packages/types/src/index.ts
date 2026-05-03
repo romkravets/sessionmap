@@ -6,7 +6,8 @@ export type WsMessage =
   | { type: "whale"; data: WhaleEvent }
   | { type: "liquidation"; data: LiquidationEvent }
   | { type: "funding"; data: FundingRateMap }
-  | { type: "gas"; data: EthGas };
+  | { type: "gas"; data: EthGas }
+  | { type: "commodities"; data: CommodityData };
 
 export type PriceSnapshot = Record<
   string,
@@ -26,6 +27,7 @@ export interface WhaleEvent {
   from: string;
   to: string;
   ts: number;
+  simulated?: boolean; // true = fallback generated event, not real on-chain data
 }
 
 export interface LiquidationEvent {
@@ -44,6 +46,19 @@ export interface EthGas {
   slow: number;
   standard: number;
   fast: number;
+}
+
+export interface CommodityItem {
+  price: number;
+  change: number;
+  changePercent: number;
+}
+
+export interface CommodityData {
+  gold: CommodityItem | null;
+  oil:  CommodityItem | null;
+  gas:  CommodityItem | null;
+  ts: number;
 }
 
 // ── Exchange / Globe Types ────────────────────────────────────────────────────
@@ -100,6 +115,7 @@ export interface AppState {
   liquidations: LiquidationEvent[];
   fundingRates: FundingRateMap;
   ethGas: EthGas | null;
+  commodities: CommodityData | null;
   globeMode: GlobeMode;
   terminalMode: boolean;
   tweaks: TweakValues;

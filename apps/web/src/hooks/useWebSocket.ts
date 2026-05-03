@@ -27,8 +27,15 @@ const WhaleMessageSchema = z.object({
     from: z.string(),
     to: z.string(),
     ts: z.number(),
+    simulated: z.boolean().optional(),
   }),
 });
+const CommodityItemSchema = z.object({
+  price: z.number(),
+  change: z.number(),
+  changePercent: z.number(),
+});
+
 const WsMessageSchema = z.union([
   PricesMessageSchema,
   MetaMessageSchema,
@@ -55,6 +62,15 @@ const WsMessageSchema = z.union([
       slow: z.number(),
       standard: z.number(),
       fast: z.number(),
+    }),
+  }),
+  z.object({
+    type: z.literal("commodities"),
+    data: z.object({
+      gold: CommodityItemSchema.nullable(),
+      oil:  CommodityItemSchema.nullable(),
+      gas:  CommodityItemSchema.nullable(),
+      ts: z.number(),
     }),
   }),
 ]);
@@ -121,6 +137,8 @@ export function useWebSocket() {
             dispatch({ type: "FUNDING_UPDATE", payload: msg.data });
           } else if (msg.type === "gas") {
             dispatch({ type: "GAS_UPDATE", payload: msg.data });
+          } else if (msg.type === "commodities") {
+            dispatch({ type: "COMMODITIES_UPDATE", payload: msg.data });
           }
         } catch {
           // ignore malformed
