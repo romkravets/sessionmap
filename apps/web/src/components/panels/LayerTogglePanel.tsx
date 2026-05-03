@@ -11,12 +11,12 @@ interface LayerDef {
 }
 
 const LAYERS: LayerDef[] = [
-  { key: "cities",    label: "Міста",    icon: "◆" },
-  { key: "resources", label: "Ресурси",  icon: "▲" },
-  { key: "straits",   label: "Протоки",  icon: "⬡" },
-  { key: "cables",    label: "Кабелі",   icon: "∿" },
-  { key: "borders",   label: "Кордони",  icon: "▭" },
-  { key: "seasons",   label: "Сезони",   icon: "◑" },
+  { key: "cities",    label: "Cities",    icon: "◆" },
+  { key: "resources", label: "Resources", icon: "▲" },
+  { key: "straits",   label: "Straits",   icon: "⬡" },
+  { key: "cables",    label: "Cables",    icon: "∿" },
+  { key: "borders",   label: "Borders",   icon: "▭" },
+  { key: "seasons",   label: "Seasons",   icon: "◑" },
 ];
 
 const ACTIVE_COLORS: Record<LayerKey, string> = {
@@ -38,120 +38,51 @@ export function LayerTogglePanel() {
     <div
       style={{
         position: "absolute",
-        bottom: "72px",
+        top: "46px",
         right: "16px",
         pointerEvents: "all",
         zIndex: 400,
         display: "flex",
         flexDirection: "column",
         alignItems: "flex-end",
-        gap: "8px",
+        gap: "6px",
         userSelect: "none",
       }}
     >
-      {/* Layer items — expand upward */}
-      {open && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "4px",
-            alignItems: "flex-end",
-          }}
-        >
-          {LAYERS.map((layer) => {
-            const on = layers[layer.key];
-            const col = ACTIVE_COLORS[layer.key];
-            return (
-              <button
-                key={layer.key}
-                onClick={() => toggle(layer.key)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  background: on ? "rgba(8,11,20,0.92)" : "rgba(8,11,20,0.72)",
-                  border: `1px solid ${on ? col + "55" : "rgba(255,255,255,0.08)"}`,
-                  borderRadius: "6px",
-                  padding: "6px 10px",
-                  cursor: "pointer",
-                  color: on ? col : "rgba(255,255,255,0.3)",
-                  fontFamily: "var(--font-mono, monospace)",
-                  fontSize: "11px",
-                  letterSpacing: "0.05em",
-                  transition: "border-color 0.2s, color 0.2s, background 0.2s",
-                  boxShadow: on ? `0 0 0 1px ${col}22, 0 2px 12px rgba(0,0,0,0.5)` : "0 2px 8px rgba(0,0,0,0.4)",
-                  minWidth: "130px",
-                  justifyContent: "space-between",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                  <span style={{ fontSize: "10px", opacity: on ? 0.9 : 0.3 }}>{layer.icon}</span>
-                  <span>{layer.label}</span>
-                </div>
-                {/* Toggle pill */}
-                <div
-                  style={{
-                    width: "24px",
-                    height: "12px",
-                    borderRadius: "6px",
-                    background: on ? col : "rgba(255,255,255,0.08)",
-                    border: `1px solid ${on ? col + "66" : "rgba(255,255,255,0.12)"}`,
-                    position: "relative",
-                    transition: "background 0.2s",
-                    flexShrink: 0,
-                  }}
-                >
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "1px",
-                      left: on ? "11px" : "1px",
-                      width: "8px",
-                      height: "8px",
-                      borderRadius: "50%",
-                      background: on ? "rgba(8,11,20,0.9)" : "rgba(255,255,255,0.2)",
-                      transition: "left 0.18s",
-                    }}
-                  />
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Toggle button */}
+      {/* Toggle button — sits at top, dropdown opens below */}
       <button
         onClick={() => setOpen((p) => !p)}
         title="Toggle layers"
         style={{
-          width: "36px",
-          height: "36px",
-          borderRadius: "8px",
-          background: open ? "rgba(34,211,238,0.15)" : "rgba(8,11,20,0.88)",
-          border: `1px solid ${open ? "rgba(34,211,238,0.4)" : "rgba(255,255,255,0.12)"}`,
+          height: "26px",
+          borderRadius: "6px",
+          background: open ? "rgba(34,211,238,0.12)" : "none",
+          border: `1px solid ${open ? "rgba(34,211,238,0.35)" : "rgba(255,255,255,0.08)"}`,
           cursor: "pointer",
-          color: open ? "#22d3ee" : "rgba(255,255,255,0.6)",
-          fontSize: "16px",
+          color: open ? "#22d3ee" : "rgba(255,255,255,0.55)",
+          fontSize: "11px",
+          fontFamily: "var(--font-mono, monospace)",
+          letterSpacing: "0.08em",
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
-          boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
+          gap: "6px",
+          padding: "0 10px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
           transition: "background 0.2s, border-color 0.2s, color 0.2s",
           position: "relative",
         }}
       >
-        ⊞
-        {/* Active layer count badge */}
+        <span style={{ fontSize: "13px" }}>⊞</span>
+        Layers
+        {/* Hidden-layer count badge */}
         {!open && activeCount < LAYERS.length && (
           <div
             style={{
               position: "absolute",
               top: "-4px",
               right: "-4px",
-              width: "14px",
-              height: "14px",
+              width: "13px",
+              height: "13px",
               borderRadius: "50%",
               background: "#f97316",
               border: "1px solid rgba(8,11,20,0.9)",
@@ -168,6 +99,78 @@ export function LayerTogglePanel() {
           </div>
         )}
       </button>
+
+      {/* Layer rows — expand downward */}
+      {open && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "3px",
+            alignItems: "flex-end",
+          }}
+        >
+          {LAYERS.map((layer) => {
+            const on = layers[layer.key];
+            const col = ACTIVE_COLORS[layer.key];
+            return (
+              <button
+                key={layer.key}
+                onClick={() => toggle(layer.key)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  background: on ? "rgba(8,11,20,0.92)" : "rgba(8,11,20,0.72)",
+                  border: `1px solid ${on ? col + "50" : "rgba(255,255,255,0.07)"}`,
+                  borderRadius: "6px",
+                  padding: "5px 10px",
+                  cursor: "pointer",
+                  color: on ? col : "rgba(255,255,255,0.28)",
+                  fontFamily: "var(--font-mono, monospace)",
+                  fontSize: "10px",
+                  letterSpacing: "0.06em",
+                  transition: "border-color 0.2s, color 0.2s, background 0.2s",
+                  boxShadow: on ? `0 0 0 1px ${col}18, 0 2px 10px rgba(0,0,0,0.5)` : "0 1px 6px rgba(0,0,0,0.35)",
+                  minWidth: "128px",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                  <span style={{ fontSize: "9px", opacity: on ? 0.85 : 0.25 }}>{layer.icon}</span>
+                  <span>{layer.label}</span>
+                </div>
+                {/* Toggle pill */}
+                <div
+                  style={{
+                    width: "22px",
+                    height: "11px",
+                    borderRadius: "6px",
+                    background: on ? col : "rgba(255,255,255,0.07)",
+                    border: `1px solid ${on ? col + "60" : "rgba(255,255,255,0.10)"}`,
+                    position: "relative",
+                    transition: "background 0.18s",
+                    flexShrink: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "1px",
+                      left: on ? "10px" : "1px",
+                      width: "7px",
+                      height: "7px",
+                      borderRadius: "50%",
+                      background: on ? "rgba(8,11,20,0.9)" : "rgba(255,255,255,0.18)",
+                      transition: "left 0.16s",
+                    }}
+                  />
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

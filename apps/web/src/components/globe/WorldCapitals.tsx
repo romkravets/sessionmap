@@ -166,9 +166,9 @@ const CITIES: City[] = [
 ];
 
 const TIER_DOT: Record<number, { size: number; opacity: number; alwaysLabel: boolean }> = {
-  1: { size: 5, opacity: 0.75, alwaysLabel: true  },
-  2: { size: 3, opacity: 0.45, alwaysLabel: false },
-  3: { size: 2, opacity: 0.25, alwaysLabel: false },
+  1: { size: 6, opacity: 0.95, alwaysLabel: true  },
+  2: { size: 4, opacity: 0.80, alwaysLabel: false },
+  3: { size: 3, opacity: 0.65, alwaysLabel: false },
 };
 
 // Label visibility by zoom level (camera distance from globe center, globe radius = 1):
@@ -229,16 +229,18 @@ export const WorldCapitals = memo(function WorldCapitals() {
               zIndex: isHov ? 80 : city.tier === 1 ? 10 : 5,
             }}
           >
-            {/* Diamond marker */}
+            {/* Diamond marker — white fill + dark outline ring for day/night contrast */}
             <div
               style={{
                 width:  isHov ? cfg.size + 3 : cfg.size,
                 height: isHov ? cfg.size + 3 : cfg.size,
-                background: `rgba(255,255,255,${isHov ? 0.95 : cfg.opacity})`,
+                background: `rgba(255,255,255,${isHov ? 1 : cfg.opacity})`,
                 borderRadius: "1px",
                 transform: "rotate(45deg)",
-                boxShadow: isHov ? "0 0 8px rgba(255,255,255,0.7)" : "none",
-                transition: "width 0.2s, height 0.2s, opacity 0.3s, box-shadow 0.15s",
+                boxShadow: isHov
+                  ? "0 0 0 1.5px rgba(0,0,0,0.9), 0 0 10px rgba(255,255,255,0.8)"
+                  : "0 0 0 1.5px rgba(0,0,0,0.85), 0 0 3px rgba(0,0,0,0.6)",
+                transition: "width 0.2s, height 0.2s, box-shadow 0.15s",
               }}
             />
 
