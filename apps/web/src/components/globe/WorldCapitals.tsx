@@ -1,6 +1,29 @@
 "use client";
 
 import { useState, useEffect, useRef, memo } from "react";
+import { useLayer } from "@/hooks/useLayers";
+
+// Subscribes to window.globeCamDist updated every animation frame
+function useCamDist(): number {
+  const distRef = useRef<number>(2.5);
+  const [dist, setDist] = useState(2.5);
+
+  useEffect(() => {
+    let raf: number;
+    const poll = () => {
+      const d = window.globeCamDist ?? 2.5;
+      if (Math.abs(d - distRef.current) > 0.02) {
+        distRef.current = d;
+        setDist(d);
+      }
+      raf = requestAnimationFrame(poll);
+    };
+    raf = requestAnimationFrame(poll);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  return dist;
+}
 
 interface Position { x: number; y: number; visible: boolean; }
 
@@ -148,10 +171,22 @@ const TIER_DOT: Record<number, { size: number; opacity: number; alwaysLabel: boo
   3: { size: 2, opacity: 0.25, alwaysLabel: false },
 };
 
+// Label visibility by zoom level (camera distance from globe center, globe radius = 1):
+//   dist > 2.2  → only tier 1 labels
+//   dist > 1.7  → tier 1 + 2 labels
+//   dist <= 1.7 → all labels (tier 1, 2, 3)
+function labelVisible(tier: number, dist: number): boolean {
+  if (tier === 1) return true;
+  if (tier === 2) return dist <= 2.2;
+  return dist <= 1.7;
+}
+
 export const WorldCapitals = memo(function WorldCapitals() {
+  const visible = useLayer("cities");
   const [positions, setPositions] = useState<Record<string, Position>>({});
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const rafRef = useRef<number>(0);
+  const camDist = useCamDist();
 
   useEffect(() => {
     const update = () => {
@@ -168,6 +203,8 @@ export const WorldCapitals = memo(function WorldCapitals() {
     return () => cancelAnimationFrame(rafRef.current);
   }, []);
 
+  if (!visible) return null;
+
   return (
     <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
       {CITIES.map((city) => {
@@ -175,6 +212,7 @@ export const WorldCapitals = memo(function WorldCapitals() {
         if (!pos?.visible) return null;
         const isHov = hoveredId === city.id;
         const cfg = TIER_DOT[city.tier];
+        const showLabel = labelVisible(city.tier, camDist);
 
         return (
           <div
@@ -200,12 +238,12 @@ export const WorldCapitals = memo(function WorldCapitals() {
                 borderRadius: "1px",
                 transform: "rotate(45deg)",
                 boxShadow: isHov ? "0 0 8px rgba(255,255,255,0.7)" : "none",
-                transition: "all 0.15s",
+                transition: "width 0.2s, height 0.2s, opacity 0.3s, box-shadow 0.15s",
               }}
             />
 
-            {/* Tier-1 always-visible name label */}
-            {cfg.alwaysLabel && !isHov && (
+            {/* Zoom-aware label: visible when zoomed close enough for this tier */}
+            {showLabel && !isHov && (
               <div
                 style={{
                   position: "absolute",
@@ -213,11 +251,18 @@ export const WorldCapitals = memo(function WorldCapitals() {
                   top: "-14px",
                   transform: "translateX(-50%)",
                   whiteSpace: "nowrap",
-                  fontSize: "7px",
+                  fontSize: city.tier === 1 ? "8px" : city.tier === 2 ? "7px" : "6px",
                   fontFamily: "var(--font-mono, monospace)",
-                  color: "rgba(255,255,255,0.38)",
-                  letterSpacing: "0.05em",
+                  color: city.tier === 1
+                    ? "rgba(255,255,255,0.92)"
+                    : city.tier === 2
+                      ? "rgba(255,255,255,0.80)"
+                      : "rgba(255,255,255,0.68)",
+                  textShadow: "0 0 4px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.95), 1px 1px 0 rgba(0,0,0,1), -1px -1px 0 rgba(0,0,0,1), 0 1px 0 rgba(0,0,0,1), 0 -1px 0 rgba(0,0,0,1)",
+                  letterSpacing: "0.04em",
                   pointerEvents: "none",
+                  opacity: 1,
+                  transition: "opacity 0.4s",
                 }}
               >
                 {city.name}

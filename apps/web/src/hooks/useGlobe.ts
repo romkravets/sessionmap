@@ -46,6 +46,8 @@ declare global {
       setMode: (m: GlobeMode) => void;
       mode: GlobeMode;
     };
+    globeCamDist?: number;
+    globeLayerGroups?: Record<string, { visible: boolean }>;
     timeOffsetHours?: number;
     tweakPulse?: boolean;
     onWhaleArc?: (w: {
@@ -626,6 +628,8 @@ export function useGlobe(
       // ── Political country fill overlay ────────────────────────────────────
       // Draws each country polygon on a canvas (equirectangular) then wraps it
       // as a CanvasTexture on a sphere at r=1.001 with low opacity.
+      const politicalGroup = new THREE.Group();
+      scene.add(politicalGroup);
       const POLITICAL_PALETTE = [
         "#7dba8c", // green
         "#6ea8d8", // blue
@@ -719,7 +723,7 @@ export function useGlobe(
           }),
         );
         politicalMesh.renderOrder = 1;
-        scene.add(politicalMesh);
+        politicalGroup.add(politicalMesh);
         console.log("[Political] overlay added:", features.length, "countries");
       })().catch((e) => console.error("[Political] failed:", e));
 
@@ -972,6 +976,58 @@ export function useGlobe(
         tradeMaterials.push(mat);
       });
 
+      // ── Submarine cables ────────────────────────────────────────────────
+      const SUBMARINE_CABLES: Array<{ name: string; waypoints: [number, number][] }> = [
+        { name: "TAT-14",       waypoints: [[39.0, -74.5], [47.5, -40.0], [51.5, -0.1]] },
+        { name: "MAREA",        waypoints: [[36.8, -75.9], [43.3, -8.4]] },
+        { name: "Columbus-3",   waypoints: [[25.8, -80.2], [37.4, -5.9]] },
+        { name: "SAT-3",        waypoints: [[51.5, -0.1], [14.7, -17.4], [4.3, 9.7], [-33.9, 18.4]] },
+        { name: "BRUSA",        waypoints: [[-23.6, -46.6], [32.3, -64.8], [38.0, -74.0]] },
+        { name: "SAm-1",        waypoints: [[25.8, -80.2], [10.5, -75.5], [-12.0, -77.1], [-33.4, -70.7], [-23.6, -46.6]] },
+        { name: "TPC-5",        waypoints: [[33.7, -118.2], [19.9, -155.6], [35.7, 139.7]] },
+        { name: "Hawaiki",      waypoints: [[-36.9, 174.8], [-33.9, 151.2], [21.3, -157.8], [45.5, -122.7]] },
+        { name: "JUPITER",      waypoints: [[34.0, -118.2], [21.3, -157.8], [35.7, 139.7], [14.1, 121.0]] },
+        { name: "AAG",          waypoints: [[22.3, 114.2], [10.8, 106.7], [13.1, 100.5], [19.9, -155.6], [34.0, -118.2]] },
+        { name: "C2C",          waypoints: [[22.3, 114.2], [35.7, 139.7], [47.6, -122.3]] },
+        { name: "SEA-ME-WE 3",  waypoints: [[43.3, 5.4], [29.9, 32.5], [12.8, 43.2], [22.1, 60.0], [19.1, 72.8], [6.9, 79.8], [1.3, 103.8], [-6.2, 106.8]] },
+        { name: "IMEWE",        waypoints: [[22.3, 114.2], [22.1, 60.0], [25.3, 57.0], [12.8, 43.2], [29.9, 32.5], [43.3, 5.4]] },
+        { name: "EASSy",        waypoints: [[11.6, 43.1], [2.0, 45.3], [-4.0, 39.7], [-17.7, 37.0], [-33.9, 18.4]] },
+        { name: "SEACOM",       waypoints: [[-33.9, 18.4], [-23.0, 35.5], [-4.0, 39.7], [1.3, 103.8]] },
+        { name: "SJC",          waypoints: [[35.7, 139.7], [31.2, 121.5], [22.3, 114.2]] },
+      ];
+
+      const cableMaterials: THREE.LineDashedMaterial[] = [];
+      const cableGroup = new THREE.Group();
+      scene.add(cableGroup);
+
+      SUBMARINE_CABLES.forEach((cable) => {
+        const pts: THREE.Vector3[] = [];
+        for (let i = 0; i < cable.waypoints.length - 1; i++) {
+          const [la1, ln1] = cable.waypoints[i];
+          const [la2, ln2] = cable.waypoints[i + 1];
+          pts.push(...greatCircleArc(
+            latLngToVec3(la1, ln1, 1.0),
+            latLngToVec3(la2, ln2, 1.0),
+            0.002,
+            40,
+          ));
+        }
+        const geo = new THREE.BufferGeometry().setFromPoints(pts);
+        const mat = new THREE.LineDashedMaterial({
+          color: 0x22d3ee,
+          dashSize: 0.018,
+          gapSize: 0.012,
+          linewidth: 1,
+          transparent: true,
+          opacity: 0.5,
+          depthTest: true,
+        });
+        const line = new THREE.Line(geo, mat);
+        (line as unknown as { computeLineDistances(): void }).computeLineDistances();
+        cableGroup.add(line);
+        cableMaterials.push(mat);
+      });
+
       // ── Globe projection (shared with React overlay) ───────────────────
       window.exchangeData = EXCHANGES;
       window.globeProject = (lat: number, lng: number) => {
@@ -984,6 +1040,16 @@ export function useGlobe(
           y: ((-v.y + 1) / 2) * window.innerHeight,
           visible: facing > 0.15,
         };
+      };
+
+      // Expose Three.js layer groups so LayerTogglePanel can toggle visibility
+      const bordersProxy = {
+        get visible() { return borderGroup.visible; },
+        set visible(v: boolean) { borderGroup.visible = v; politicalGroup.visible = v; },
+      };
+      window.globeLayerGroups = {
+        cables:  cableGroup,
+        borders: bordersProxy,
       };
 
       window.globeState = {
@@ -1289,6 +1355,13 @@ export function useGlobe(
           ).dashOffset -= dt * 0.04;
         });
 
+        // Animate submarine cable dash flow (cyan, slower)
+        cableMaterials.forEach((mat) => {
+          (
+            mat as THREE.LineDashedMaterial & { dashOffset: number }
+          ).dashOffset -= dt * 0.02;
+        });
+
         // auto-spawn arcs when no WS (fallback mode)
         nextSpawn -= dt;
         if (nextSpawn <= 0) {
@@ -1297,6 +1370,7 @@ export function useGlobe(
         }
 
         updateWhaleArcs();
+        window.globeCamDist = camera.position.length();
         controls.update();
         renderer.render(scene, camera);
       }
@@ -1317,8 +1391,11 @@ export function useGlobe(
         window.removeEventListener("resize", onResize);
         renderer.dispose();
         tradeMaterials.forEach((m) => m.dispose());
+        cableMaterials.forEach((m) => m.dispose());
+        delete window.globeLayerGroups;
         delete window.globeProject;
         delete window.globeState;
+        delete window.globeCamDist;
         delete window.onWhaleArc;
       };
     })();

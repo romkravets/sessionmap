@@ -2,6 +2,7 @@
 
 import { memo, useState, useEffect } from "react";
 import { getSunLatLng } from "@/lib/session-logic";
+import { useLayer } from "@/hooks/useLayers";
 
 const SEASON_EMOJI: Record<string, string> = {
   Spring: "🌱",
@@ -35,6 +36,7 @@ function computeSeasonData() {
 }
 
 export const SeasonWidget = memo(function SeasonWidget() {
+  const seasonVisible = useLayer("seasons");
   const [data, setData] = useState(computeSeasonData);
 
   // Refresh every 5 minutes — declination changes very slowly
@@ -42,6 +44,8 @@ export const SeasonWidget = memo(function SeasonWidget() {
     const id = setInterval(() => setData(computeSeasonData()), 5 * 60_000);
     return () => clearInterval(id);
   }, []);
+
+  if (!seasonVisible) return null;
 
   const { declination, nh, sh } = data;
   const angle = Math.abs(declination).toFixed(1);

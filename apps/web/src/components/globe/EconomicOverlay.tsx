@@ -3,11 +3,31 @@
 import { useState, useEffect, useRef, memo } from "react";
 import { ECONOMIC_POINTS, ECONOMIC_COLORS, ECONOMIC_LABELS } from "@/lib/economic-data";
 import type { EconomicPoint, EconomicType } from "@/lib/economic-data";
+import { useLayer } from "@/hooks/useLayers";
 
 interface Position {
   x: number;
   y: number;
   visible: boolean;
+}
+
+function useCamDist(): number {
+  const distRef = useRef<number>(2.5);
+  const [dist, setDist] = useState(2.5);
+  useEffect(() => {
+    let raf: number;
+    const poll = () => {
+      const d = window.globeCamDist ?? 2.5;
+      if (Math.abs(d - distRef.current) > 0.02) {
+        distRef.current = d;
+        setDist(d);
+      }
+      raf = requestAnimationFrame(poll);
+    };
+    raf = requestAnimationFrame(poll);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  return dist;
 }
 
 // Marker size by tier
@@ -202,9 +222,11 @@ function Tooltip({ point, color, label }: TooltipProps) {
 }
 
 export const EconomicOverlay = memo(function EconomicOverlay() {
+  const visible = useLayer("resources");
   const [positions, setPositions] = useState<Record<string, Position>>({});
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const rafRef = useRef<number>(0);
+  const camDist = useCamDist();
 
   useEffect(() => {
     const update = () => {
@@ -223,15 +245,18 @@ export const EconomicOverlay = memo(function EconomicOverlay() {
     return () => cancelAnimationFrame(rafRef.current);
   }, []);
 
+  if (!visible) return null;
+
   return (
     <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
       {ECONOMIC_POINTS.map((pt) => {
         const pos = positions[pt.id];
         if (!pos?.visible) return null;
 
-        // Tier 3 only visible when hovered
         const isHov = hoveredId === pt.id;
-        if (pt.tier === 3 && !isHov) return null;
+        // tier 2 hidden until zoomed in (dist ≤ 2.2); tier 3 until very close (dist ≤ 1.7)
+        if (pt.tier === 2 && camDist > 2.2 && !isHov) return null;
+        if (pt.tier === 3 && camDist > 1.7 && !isHov) return null;
 
         const color = ECONOMIC_COLORS[pt.type];
         const label = ECONOMIC_LABELS[pt.type];
@@ -263,7 +288,11 @@ export const EconomicOverlay = memo(function EconomicOverlay() {
                   transform: "translateX(-50%)",
                   fontSize: "7px",
                   fontFamily: "var(--font-mono, monospace)",
-                  color: `${color}88`,
+                  background: "rgba(6,9,18,0.82)",
+                  border: `1px solid ${color}44`,
+                  borderRadius: "3px",
+                  padding: "1px 4px",
+                  color: `${color}dd`,
                   letterSpacing: "0.08em",
                   whiteSpace: "nowrap",
                   pointerEvents: "none",

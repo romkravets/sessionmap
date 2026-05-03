@@ -45,6 +45,20 @@ const EconomicOverlay = dynamic(
     ),
   { ssr: false },
 );
+const StrategicStraits = dynamic(
+  () =>
+    import("@/components/globe/StrategicStraits").then(
+      (m) => m.StrategicStraits,
+    ),
+  { ssr: false },
+);
+const LayerTogglePanel = dynamic(
+  () =>
+    import("@/components/panels/LayerTogglePanel").then(
+      (m) => m.LayerTogglePanel,
+    ),
+  { ssr: false },
+);
 const CleanUI = dynamic(
   () => import("@/components/panels/CleanUI").then((m) => m.CleanUI),
   { ssr: false },
@@ -140,6 +154,8 @@ function SessionMapApp() {
         <StockMarketLabels />
         <WorldCapitals />
         <EconomicOverlay />
+        <StrategicStraits />
+        <LayerTogglePanel />
 
         {terminalMode ? (
           <TerminalUI
