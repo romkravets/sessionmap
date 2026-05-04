@@ -144,7 +144,7 @@ export const CleanUI = memo(function CleanUI({
               }}
               title="Price alerts"
             >
-              🔔{alertCount > 0 ? ` ${alertCount}` : ""}
+              🔔<span className="topbar-btn-text">{alertCount > 0 ? ` ${alertCount}` : ""}</span>
             </button>
           )}
           <button
@@ -180,7 +180,7 @@ export const CleanUI = memo(function CleanUI({
                 display: "inline-block",
               }}
             />
-            Terminal
+            <span className="topbar-btn-text">Terminal</span>
           </button>
         </div>
       </div>
@@ -356,6 +356,7 @@ export const CleanUI = memo(function CleanUI({
 
         {/* Center column: volume bars, altcoin season, gas */}
         <div
+          className="clean-ui-center"
           style={{
             display: "flex",
             flexDirection: "column",
@@ -512,6 +513,7 @@ export const CleanUI = memo(function CleanUI({
             return (
               <div
                 key={sym}
+                className={sym === "SOL" || sym === "XRP" ? "clean-ui-price-extra" : ""}
                 style={{ display: "flex", alignItems: "baseline", gap: "8px" }}
               >
                 <span
@@ -558,6 +560,7 @@ export const CleanUI = memo(function CleanUI({
           {/* Commodity Prices */}
           {commodities && (
             <div
+              className="clean-ui-commodities"
               style={{
                 borderTop: "1px solid rgba(255,255,255,0.06)",
                 paddingTop: "8px",
@@ -624,7 +627,7 @@ export const CleanUI = memo(function CleanUI({
           )}
 
           {/* Earth Seasons */}
-          <SeasonWidget />
+          <div className="clean-ui-season"><SeasonWidget /></div>
         </div>
       </div>
     </div>

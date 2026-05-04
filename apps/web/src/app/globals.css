@@ -45,27 +45,71 @@ body.terminal-mode {
 
 /* ── Mobile responsive ───────────────────────────────────────────────────── */
 @media (max-width: 768px) {
+
+  /* ── Wrapper ── */
   .clean-ui-wrap {
-    padding: 12px 14px !important;
+    padding: 10px 12px !important;
   }
+
+  /* ── Top bar: no wrap, compact ── */
   .clean-ui-topbar {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .clean-ui-bottom {
-    flex-direction: column;
-    gap: 10px;
-    align-items: flex-start !important;
-  }
-  .clean-ui-prices {
-    flex-direction: row !important;
-    flex-wrap: wrap;
-    gap: 10px 18px;
+    flex-wrap: nowrap;
+    gap: 6px;
     align-items: center;
   }
+
+  /* GlobeModeBar: icon-only (hide text labels) */
+  .mode-label {
+    display: none;
+  }
+
+  /* Bell / Terminal: hide text, keep icon */
+  .topbar-btn-text {
+    display: none;
+  }
+
+  /* ── Whale ticker: hidden ── */
   .clean-ui-whale-ticker {
     display: none;
   }
+
+  /* ── Bottom row: side-by-side, pinned to screen edges ── */
+  .clean-ui-bottom {
+    flex-direction: row !important;
+    justify-content: space-between;
+    align-items: flex-end !important;
+    gap: 8px;
+  }
+
+  /* Center column (volume bars, gas, dominance, correlation): hidden */
+  .clean-ui-center {
+    display: none !important;
+  }
+
+  /* Session block: limit width so prices have room */
+  .clean-ui-bottom > div:first-child {
+    max-width: 52% !important;
+  }
+
+  /* ── Prices: column, right-aligned ── */
+  .clean-ui-prices {
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    gap: 5px !important;
+  }
+
+  /* Hide SOL / XRP on mobile — only BTC + ETH */
+  .clean-ui-price-extra {
+    display: none;
+  }
+
+  /* Hide commodities & season on mobile */
+  .clean-ui-commodities,
+  .clean-ui-season {
+    display: none !important;
+  }
+
+  /* ── Terminal ── */
   .terminal-grid {
     grid-template-columns: 1fr !important;
   }

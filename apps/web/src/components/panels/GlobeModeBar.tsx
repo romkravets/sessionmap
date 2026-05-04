@@ -51,7 +51,7 @@ export const GlobeModeBar = memo(function GlobeModeBar({ mode, onChange }: Globe
             }}
           >
             <span style={{ fontSize: '13px', lineHeight: 1 }}>{meta.icon}</span>
-            {meta.label}
+            <span className="mode-label">{meta.label}</span>
           </button>
         )
       })}
