@@ -19,20 +19,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${instrumentSerif.variable}`}>
-      <head>
-        <link
-          rel="preload"
-          as="image"
-          href="https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="preload"
-          as="image"
-          href="https://unpkg.com/three-globe@2.31.1/example/img/earth-night.jpg"
-          crossOrigin="anonymous"
-        />
-      </head>
+      <head />
       <body className="font-sans mode-transition" suppressHydrationWarning>
         {children}
       </body>
