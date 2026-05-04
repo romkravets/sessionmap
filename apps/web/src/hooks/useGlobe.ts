@@ -78,7 +78,8 @@ const FRAG = /* glsl */ `
   uniform sampler2D dayTex;
   uniform sampler2D nightTex;
   uniform vec3 sunDir;
-  uniform bool hasTextures;
+  uniform bool hasDayTex;
+  uniform bool hasNightTex;
   uniform float u_declination; // solar declination in degrees (-23.45..+23.45)
   varying vec2 vUv;
   varying vec3 vNormal;
@@ -100,24 +101,27 @@ const FRAG = /* glsl */ `
     // winterFactor: 1.0 on winter side, 0.0 on summer side
     float winterFactor = clamp(-seasonal, 0.0, 1.0);
 
+    // Procedural fallback land mask (used when textures are absent)
+    float lng = (vUv.x - 0.5) * 6.28318;
+    float lat = (vUv.y - 0.5) * 3.14159;
+    float land  = sin(lng * 1.8) * cos(lat * 2.2) * 0.5
+                + sin(lng * 3.1 + 0.9) * cos(lat * 1.4 + 0.5) * 0.35
+                + sin(lng * 0.9 - 1.2) * cos(lat * 3.0 - 0.3) * 0.25;
+    land = smoothstep(0.18, 0.42, land);
+    float polar = smoothstep(0.75, 0.95, abs(vUv.y * 2.0 - 1.0));
+
     vec4 day, night;
-    if (hasTextures) {
-      day   = texture2D(dayTex,   vUv);
-      night = texture2D(nightTex, vUv);
-      night.rgb = night.rgb * 2.8 * nightBlend;
+    if (hasDayTex) {
+      day = texture2D(dayTex, vUv);
     } else {
-      float lng = (vUv.x - 0.5) * 6.28318;
-      float lat = (vUv.y - 0.5) * 3.14159;
-      float land  = sin(lng * 1.8) * cos(lat * 2.2) * 0.5
-                  + sin(lng * 3.1 + 0.9) * cos(lat * 1.4 + 0.5) * 0.35
-                  + sin(lng * 0.9 - 1.2) * cos(lat * 3.0 - 0.3) * 0.25;
-      land = smoothstep(0.18, 0.42, land);
-      float polar = smoothstep(0.75, 0.95, abs(vUv.y * 2.0 - 1.0));
       vec3 dayRGB = mix(vec3(0.04, 0.16, 0.42), vec3(0.14, 0.30, 0.12), land);
-      // Modulate polar whiteness by winterFactor so summer hemisphere shows less snow
-      // baseline keeps a small polar tint even in summer (0.15), winterFactor scales up to full
       dayRGB = mix(dayRGB, vec3(0.75, 0.83, 0.88), polar * (0.15 + 0.85 * winterFactor));
-      day   = vec4(dayRGB, 1.0);
+      day = vec4(dayRGB, 1.0);
+    }
+    if (hasNightTex) {
+      night = texture2D(nightTex, vUv);
+      night.rgb = night.rgb * 3.5 * nightBlend;
+    } else {
       night = vec4(mix(vec3(0.01, 0.03, 0.10), vec3(0.22, 0.18, 0.04), land) * nightBlend * 2.0, 1.0);
     }
 
@@ -256,7 +260,8 @@ export function useGlobe(
         dayTex: { value: null as THREE.Texture | null },
         nightTex: { value: null as THREE.Texture | null },
         sunDir: { value: new THREE.Vector3(1, 0.2, 0.3).normalize() },
-        hasTextures: { value: false },
+        hasDayTex:  { value: false },
+        hasNightTex: { value: false },
         u_declination: { value: 0.0 },
       };
 
@@ -391,11 +396,9 @@ export function useGlobe(
         "https://www.solarsystemscope.com/textures/download/8k_earth_nightmap.jpg",
       ];
 
-      let dayLoaded = false;
-      let nightLoaded = false;
-
-      function checkTextures() {
-        uniforms.hasTextures.value = !!(dayLoaded && nightLoaded);
+      function checkTextures(which: "day" | "night") {
+        if (which === "day")   uniforms.hasDayTex.value   = true;
+        if (which === "night") uniforms.hasNightTex.value = true;
       }
 
       function ensurePOTAndSetup(t: THREE.Texture) {
@@ -469,14 +472,8 @@ export function useGlobe(
         );
       }
 
-      tryLoad(dayURLs, uniforms.dayTex, () => {
-        dayLoaded = true;
-        checkTextures();
-      });
-      tryLoad(nightURLs, uniforms.nightTex, () => {
-        nightLoaded = true;
-        checkTextures();
-      });
+      tryLoad(dayURLs,   uniforms.dayTex,   () => checkTextures("day"));
+      tryLoad(nightURLs, uniforms.nightTex, () => checkTextures("night"));
 
       // ── Atmosphere ────────────────────────────────────────────────────────
       const atmoUniforms = {
@@ -1051,6 +1048,11 @@ export function useGlobe(
         cables:  cableGroup,
         borders: bordersProxy,
       };
+
+      // Apply initial layer defaults immediately after Three.js groups are registered
+      const initLayers = (window as Window & { globeLayers?: Record<string, boolean> }).globeLayers;
+      bordersProxy.visible = initLayers?.borders ?? false;
+      if (initLayers?.cables !== undefined) cableGroup.visible = initLayers.cables;
 
       window.globeState = {
         mode: optionsRef.current.mode,

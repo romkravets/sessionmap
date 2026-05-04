@@ -9,7 +9,7 @@ const LAYER_DEFAULTS: Record<LayerKey, boolean> = {
   resources: true,
   straits:   true,
   cables:    true,
-  borders:   true,
+  borders:   false,
   seasons:   true,
 };
 
@@ -21,7 +21,7 @@ function getLayerState(): Record<LayerKey, boolean> {
 
 /** Hook for a single layer's visibility. Reacts to globe-layers-changed events. */
 export function useLayer(key: LayerKey): boolean {
-  const [visible, setVisible] = useState(true);
+  const [visible, setVisible] = useState(() => LAYER_DEFAULTS[key]);
 
   useEffect(() => {
     setVisible(getLayerState()[key]);
