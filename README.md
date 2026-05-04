@@ -2,6 +2,11 @@
 
 Crypto trading sessions visualised on a real-time 3D globe — live prices, whale arc animations, and exchange markers.
 
+
+## Демо
+
+[![Демо на YouTube](https://youtu.be/A4CsLx5VScA?si=LviRHXAy_yGIXC_r)](https://youtu.be/A4CsLx5VScA?si=LviRHXAy_yGIXC_r)
+
 ## Stack
 
 | Layer        | Technology                    |
