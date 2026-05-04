@@ -281,6 +281,7 @@ export function useGlobe(
       );
       globeMesh.renderOrder = 0;
       scene.add(globeMesh);
+      window.dispatchEvent(new CustomEvent("globe-load-progress", { detail: { pct: 20 } }));
 
       const roadGroup = new THREE.Group();
       scene.add(roadGroup);
@@ -397,8 +398,14 @@ export function useGlobe(
       ];
 
       function checkTextures(which: "day" | "night") {
-        if (which === "day")   uniforms.hasDayTex.value   = true;
-        if (which === "night") uniforms.hasNightTex.value = true;
+        if (which === "day") {
+          uniforms.hasDayTex.value = true;
+          window.dispatchEvent(new CustomEvent("globe-load-progress", { detail: { pct: 60 } }));
+        }
+        if (which === "night") {
+          uniforms.hasNightTex.value = true;
+          window.dispatchEvent(new CustomEvent("globe-load-progress", { detail: { pct: 85 } }));
+        }
       }
 
       function ensurePOTAndSetup(t: THREE.Texture) {
@@ -1375,7 +1382,12 @@ export function useGlobe(
         window.globeCamDist = camera.position.length();
         controls.update();
         renderer.render(scene, camera);
+        if (firstFrame) {
+          firstFrame = false;
+          window.dispatchEvent(new CustomEvent("globe-load-progress", { detail: { pct: 100 } }));
+        }
       }
+      let firstFrame = true;
       animate();
 
       // ── Resize ────────────────────────────────────────────────────────────

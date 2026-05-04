@@ -15,6 +15,7 @@ import { getSunLatLng } from "@/lib/session-logic";
 import type { GlobeMode } from "@sessionmap/types";
 import { TweaksPanel } from "@/components/panels/TweaksPanel";
 import { PriceAlertsPanel } from "@/components/panels/PriceAlertsPanel";
+import { LoadingBar } from "@/components/panels/LoadingBar";
 
 // ── Dynamic imports (no SSR) ──────────────────────────────────────────────────
 const GlobeScene = dynamic(
@@ -132,6 +133,7 @@ function SessionMapApp() {
 
   return (
     <>
+      <LoadingBar />
       {/* 3D Globe canvas */}
       <GlobeScene mode={globeMode} tweaks={tweaks} />
 
