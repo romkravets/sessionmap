@@ -1,35 +1,42 @@
 import { broadcast } from "../ws/broadcaster.js";
 import type { FundingRateMap } from "@sessionmap/types";
 
-const SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT"];
-const SYMBOL_MAP: Record<string, string> = {
-  BTCUSDT: "BTC",
-  ETHUSDT: "ETH",
-  SOLUSDT: "SOL",
-  BNBUSDT: "BNB",
-  XRPUSDT: "XRP",
+// Kraken Futures perpetual symbols → internal symbol
+const KRAKEN_MAP: Record<string, string> = {
+  PF_XBTUSD: "BTC",
+  PF_ETHUSD: "ETH",
+  PF_SOLUSD: "SOL",
+  PF_XRPUSD: "XRP",
 };
 
-interface PremiumIndexEntry {
+interface KrakenFuturesTicker {
   symbol: string;
-  lastFundingRate: string;
+  tag: string;
+  fundingRate?: number;
+}
+
+interface KrakenFuturesResponse {
+  result: string;
+  tickers: KrakenFuturesTicker[];
 }
 
 async function fetchFundingRates(): Promise<FundingRateMap | null> {
   try {
-    const res = await fetch("https://fapi.binance.com/fapi/v1/premiumIndex", {
-      signal: AbortSignal.timeout(8000),
-    });
+    const res = await fetch(
+      "https://futures.kraken.com/derivatives/api/v3/tickers",
+      { signal: AbortSignal.timeout(8000) },
+    );
     if (!res.ok) return null;
-    const data = (await res.json()) as PremiumIndexEntry[];
+    const json = (await res.json()) as KrakenFuturesResponse;
+    if (json.result !== "success") return null;
+
     const rates: FundingRateMap = {};
-    for (const entry of data) {
-      const sym = SYMBOL_MAP[entry.symbol];
-      if (sym && SYMBOLS.includes(entry.symbol)) {
-        rates[sym] = parseFloat(entry.lastFundingRate);
-      }
+    for (const ticker of json.tickers) {
+      const sym = KRAKEN_MAP[ticker.symbol];
+      if (!sym || ticker.tag !== "perpetual" || ticker.fundingRate == null) continue;
+      rates[sym] = ticker.fundingRate;
     }
-    return rates;
+    return Object.keys(rates).length ? rates : null;
   } catch {
     return null;
   }
