@@ -3,13 +3,14 @@
     "target": "ES2020",
     "module": "CommonJS",
     "lib": ["ES2020"],
+    "rootDir": "./src",
     "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "paths": {
-      "@sessionmap/types": ["../../packages/types/src/index.ts"]
+      "@sessionmap/types": ["../../packages/types/dist/index.d.ts"]
     }
   },
   "include": ["src/**/*"],

@@ -3,27 +3,23 @@ services:
   - type: web
     name: sessionmap-web
     runtime: node
-    region: frankfurt  # EU region avoids Binance geo-block on frontend fetches
-    plan: starter      # 512MB RAM — use 'free' if budget, but builds may OOM
-    buildCommand: pnpm install --frozen-lockfile && NODE_OPTIONS=--max-old-space-size=450 pnpm --filter @sessionmap/web build
-    startCommand: node apps/web/.next/standalone/server.js
+    region: frankfurt
+    plan: starter
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @sessionmap/types build && NODE_OPTIONS=--max-old-space-size=450 pnpm --filter @sessionmap/web build
+    startCommand: pnpm --filter @sessionmap/web start
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 3000
-      - key: HOSTNAME
-        value: 0.0.0.0
       - key: NEXT_PUBLIC_WS_URL
-        sync: false  # set in Render dashboard: wss://sessionmap-server.onrender.com
+        sync: false  # set in dashboard: wss://sessionmap-server.onrender.com
 
   # ── Express / WebSocket backend ─────────────────────────────────────────────
   - type: web
     name: sessionmap-server
     runtime: node
-    region: frankfurt  # EU region — Binance/WhaleAlert don't block EU IPs
+    region: frankfurt
     plan: free
-    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @sessionmap/server build
+    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @sessionmap/types build && pnpm --filter @sessionmap/server build
     startCommand: node apps/server/dist/index.js
     envVars:
       - key: NODE_ENV
@@ -31,4 +27,4 @@ services:
       - key: PORT
         value: 4000
       - key: CLIENT_ORIGIN
-        sync: false  # set in Render dashboard: https://sessionmap-web.onrender.com
+        sync: false  # set in dashboard: https://sessionmap-web.onrender.com
