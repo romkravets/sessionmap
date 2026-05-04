@@ -5,10 +5,8 @@ import rateLimit from "express-rate-limit";
 import { WebSocketServer } from "ws";
 import { healthRouter } from "./routes/health.js";
 import { createBroadcaster, broadcast } from "./ws/broadcaster.js";
-import {
-  startBinanceConnector,
-  bootstrapPrices,
-} from "./connectors/BinanceConnector.js";
+import { bootstrapPrices } from "./connectors/BinanceConnector.js";
+import { bootstrapFromKraken, startKrakenConnector } from "./connectors/KrakenConnector.js";
 import {
   getPriceSnapshot,
   getCachedMeta,
@@ -98,9 +96,11 @@ onPriceUpdate(() => {
   broadcast({ type: "prices", data: getPriceSnapshot() });
 });
 
-// Fetch real prices via REST first so first WS snapshot is never stale
-bootstrapPrices().then(() => {
-  startBinanceConnector();
+// Bootstrap: try Kraken (EU-legal), fall back to Binance REST, then CoinGecko
+bootstrapFromKraken().then((ok) => {
+  if (!ok) return bootstrapPrices();
+}).then(() => {
+  startKrakenConnector();
 });
 
 startCoinGeckoPoller((meta) => {
