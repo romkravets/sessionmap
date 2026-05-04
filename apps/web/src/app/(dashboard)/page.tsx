@@ -157,6 +157,8 @@ function SessionMapApp() {
         <StrategicStraits />
         <LayerTogglePanel />
 
+        {/* UI panels above all globe labels (which go up to zIndex 200) */}
+        <div style={{ position: "absolute", inset: 0, zIndex: 300, pointerEvents: "none" }}>
         {terminalMode ? (
           <TerminalUI
             session={session}
@@ -202,6 +204,7 @@ function SessionMapApp() {
           onRemove={removeAlert}
           onRequestPermission={requestNotificationPermission}
         />
+        </div>
       </div>
 
       {/* Tweaks panel — lazy loaded, keyboard shortcut E */}
