@@ -14,7 +14,7 @@ import {
   getCachedMeta,
   onPriceUpdate,
 } from "./services/PriceService.js";
-import { startCoinGeckoPoller } from "./connectors/CoinGeckoConnector.js";
+import { startCoinGeckoPoller, startCoinGeckoPricePoller } from "./connectors/CoinGeckoConnector.js";
 import { startWhaleConnector } from "./connectors/WhaleConnector.js";
 import { startLiquidationsConnector } from "./connectors/LiquidationsConnector.js";
 import { startFundingConnector } from "./connectors/FundingConnector.js";
@@ -106,6 +106,10 @@ bootstrapPrices().then(() => {
 startCoinGeckoPoller((meta) => {
   broadcast({ type: "meta", data: meta });
 });
+
+// Price fallback poller — runs in parallel with Binance WS
+// Keeps prices fresh if Binance is geo-blocked (e.g. EU/Frankfurt)
+startCoinGeckoPricePoller();
 
 startWhaleConnector();
 startWhaleService();

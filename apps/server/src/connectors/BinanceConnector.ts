@@ -5,6 +5,7 @@ import {
   TRACKED,
   SYMBOL_MAP,
 } from "../services/PriceService.js";
+import { fetchCoinGeckoPrices } from "./CoinGeckoConnector.js";
 
 interface BinanceTicker {
   s: string;
@@ -19,21 +20,26 @@ interface BinanceRestTicker {
 }
 
 export async function bootstrapPrices(): Promise<void> {
+  // Try Binance first; fall back to CoinGecko if blocked (e.g. EU geo-block)
   try {
     const symbols = TRACKED.map((s) => `"${s}"`).join(",");
     const url = `https://api.binance.com/api/v3/ticker/24hr?symbols=[${symbols}]`;
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!res.ok) return;
-    const tickers = (await res.json()) as BinanceRestTicker[];
-    tickers.forEach((t) => {
-      const sym = SYMBOL_MAP[t.symbol];
-      if (!sym) return;
-      setCachedPrice(sym, parseFloat(t.lastPrice), parseFloat(t.priceChangePercent));
-    });
-    console.log("[Binance] Bootstrapped prices via REST");
+    if (res.ok) {
+      const tickers = (await res.json()) as BinanceRestTicker[];
+      tickers.forEach((t) => {
+        const sym = SYMBOL_MAP[t.symbol];
+        if (!sym) return;
+        setCachedPrice(sym, parseFloat(t.lastPrice), parseFloat(t.priceChangePercent));
+      });
+      console.log("[Binance] Bootstrapped prices via REST");
+      return;
+    }
+    console.warn("[Binance] REST returned", res.status, "— trying CoinGecko");
   } catch (err) {
-    console.warn("[Binance] Bootstrap failed:", (err as Error).message);
+    console.warn("[Binance] Bootstrap failed:", (err as Error).message, "— trying CoinGecko");
   }
+  await fetchCoinGeckoPrices();
 }
 
 export function startBinanceConnector() {

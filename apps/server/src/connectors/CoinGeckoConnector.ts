@@ -1,5 +1,5 @@
 import type { MarketMeta } from "@sessionmap/types";
-import { getCachedMeta, setCachedMeta } from "../services/PriceService.js";
+import { getCachedMeta, setCachedMeta, setCachedPrice, notifyPriceUpdate } from "../services/PriceService.js";
 
 const COINGECKO_URL =
   process.env.COINGECKO_API_URL ?? "https://api.coingecko.com/api/v3";
@@ -41,6 +41,47 @@ async function fetchGlobalMeta(): Promise<Partial<MarketMeta>> {
   } catch {
     return {};
   }
+}
+
+const CG_PRICE_IDS: Record<string, string> = {
+  bitcoin: "BTC",
+  ethereum: "ETH",
+  solana: "SOL",
+  binancecoin: "BNB",
+  ripple: "XRP",
+};
+
+export async function fetchCoinGeckoPrices(): Promise<boolean> {
+  try {
+    const ids = Object.keys(CG_PRICE_IDS).join(",");
+    const res = await fetch(
+      `${COINGECKO_URL}/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`,
+      { signal: AbortSignal.timeout(10_000) },
+    );
+    if (!res.ok) return false;
+    const data = (await res.json()) as Record<string, { usd: number; usd_24h_change: number }>;
+    let updated = false;
+    for (const [id, sym] of Object.entries(CG_PRICE_IDS)) {
+      const entry = data[id];
+      if (entry?.usd) {
+        setCachedPrice(sym, entry.usd, entry.usd_24h_change ?? 0);
+        updated = true;
+      }
+    }
+    if (updated) {
+      notifyPriceUpdate();
+      console.log("[CoinGecko] Prices updated via REST");
+    }
+    return updated;
+  } catch {
+    return false;
+  }
+}
+
+export function startCoinGeckoPricePoller() {
+  // Poll every 30s as fallback when Binance WS is geo-blocked (e.g. Frankfurt)
+  fetchCoinGeckoPrices();
+  setInterval(fetchCoinGeckoPrices, 30_000);
 }
 
 export function startCoinGeckoPoller(onUpdate: (meta: MarketMeta) => void) {
