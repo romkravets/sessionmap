@@ -13,7 +13,7 @@ const ContentSecurityPolicy = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com data:",
   // WebSocket до свого сервера + текстури з CDN + raw GitHub для GeoJSON/textures
-  "connect-src 'self' ws://localhost:4000 wss://localhost:4000 wss://*.sessionmap.app https://unpkg.com https://cdn.jsdelivr.net https://raw.githubusercontent.com https://api.github.com",
+  "connect-src 'self' ws://localhost:4000 wss://localhost:4000 wss://*.sessionmap.app wss://*.onrender.com https://*.onrender.com https://unpkg.com https://cdn.jsdelivr.net https://raw.githubusercontent.com https://api.github.com",
   "img-src 'self' data: blob: https://unpkg.com https://cdn.jsdelivr.net https://raw.githubusercontent.com",
   "worker-src blob:",
   "object-src 'none'",
@@ -44,6 +44,7 @@ const securityHeaders = [
 
 const nextConfig = {
   poweredByHeader: false,
+  output: "standalone",
 
   async headers() {
     return [
