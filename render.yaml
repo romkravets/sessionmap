@@ -5,7 +5,7 @@ services:
     runtime: node
     region: frankfurt
     plan: starter
-    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @sessionmap/types build && NODE_OPTIONS=--max-old-space-size=450 pnpm --filter @sessionmap/web build
+    buildCommand: NODE_ENV=development pnpm install --frozen-lockfile && pnpm --filter @sessionmap/types build && NODE_OPTIONS=--max-old-space-size=450 NODE_ENV=production pnpm --filter @sessionmap/web build
     startCommand: pnpm --filter @sessionmap/web start
     envVars:
       - key: NODE_ENV
@@ -19,12 +19,10 @@ services:
     runtime: node
     region: frankfurt
     plan: free
-    buildCommand: pnpm install --frozen-lockfile && pnpm --filter @sessionmap/types build && pnpm --filter @sessionmap/server build
+    buildCommand: NODE_ENV=development pnpm install --frozen-lockfile && pnpm --filter @sessionmap/types build && pnpm --filter @sessionmap/server build
     startCommand: node apps/server/dist/index.js
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 4000
       - key: CLIENT_ORIGIN
         sync: false  # set in dashboard: https://sessionmap-web.onrender.com
