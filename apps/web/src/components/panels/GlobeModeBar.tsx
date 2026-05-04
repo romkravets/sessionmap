@@ -26,12 +26,14 @@ export const GlobeModeBar = memo(function GlobeModeBar({ mode, onChange }: Globe
             onClick={() => onChange(key)}
             title={meta.tip}
             style={{
-              background: active ? 'rgba(125,211,252,0.12)' : 'rgba(255,255,255,0.03)',
-              border: `1px solid ${active ? 'var(--accent)' : 'rgba(255,255,255,0.08)'}`,
+              background: active
+                ? 'rgba(125,211,252,0.18)'
+                : 'rgba(6,9,18,0.72)',
+              border: `1px solid ${active ? 'rgba(125,211,252,0.7)' : 'rgba(255,255,255,0.22)'}`,
               borderRadius: '6px',
               padding: '5px 11px',
               cursor: 'pointer',
-              color: active ? 'var(--accent)' : 'var(--fg-muted)',
+              color: active ? '#7dd3fc' : 'rgba(255,255,255,0.88)',
               fontSize: '11px',
               fontFamily: 'var(--font-mono, monospace)',
               letterSpacing: '0.04em',
@@ -40,6 +42,12 @@ export const GlobeModeBar = memo(function GlobeModeBar({ mode, onChange }: Globe
               gap: '5px',
               transition: 'all 0.2s ease',
               whiteSpace: 'nowrap',
+              backdropFilter: 'blur(6px)',
+              WebkitBackdropFilter: 'blur(6px)',
+              textShadow: '0 1px 3px rgba(0,0,0,0.9)',
+              boxShadow: active
+                ? '0 0 8px rgba(125,211,252,0.2), inset 0 1px 0 rgba(255,255,255,0.08)'
+                : '0 2px 8px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)',
             }}
           >
             <span style={{ fontSize: '13px', lineHeight: 1 }}>{meta.icon}</span>

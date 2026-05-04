@@ -124,20 +124,23 @@ export const CleanUI = memo(function CleanUI({
               onClick={onToggleAlerts}
               style={{
                 pointerEvents: "all",
-                background: "none",
-                border: "1px solid rgba(255,255,255,0.08)",
+                background: alertCount > 0 ? "rgba(251,146,60,0.15)" : "rgba(6,9,18,0.72)",
+                border: `1px solid ${alertCount > 0 ? "rgba(251,146,60,0.6)" : "rgba(255,255,255,0.22)"}`,
                 borderRadius: "6px",
                 padding: "5px 10px",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: "5px",
-                color:
-                  alertCount > 0 ? "var(--accent-warm)" : "var(--fg-muted)",
+                color: alertCount > 0 ? "rgba(251,146,60,0.95)" : "rgba(255,255,255,0.88)",
                 fontSize: "11px",
                 fontFamily: "var(--font-mono, monospace)",
                 letterSpacing: "0.08em",
                 transition: "all 0.3s ease",
+                backdropFilter: "blur(6px)",
+                WebkitBackdropFilter: "blur(6px)",
+                textShadow: "0 1px 3px rgba(0,0,0,0.9)",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
               }}
               title="Price alerts"
             >
@@ -148,19 +151,23 @@ export const CleanUI = memo(function CleanUI({
             onClick={onToggleTerminal}
             style={{
               pointerEvents: "all",
-              background: "none",
-              border: "1px solid rgba(255,255,255,0.08)",
+              background: "rgba(6,9,18,0.72)",
+              border: "1px solid rgba(255,255,255,0.22)",
               borderRadius: "6px",
               padding: "5px 12px",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
               gap: "7px",
-              color: "var(--fg-muted)",
+              color: "rgba(255,255,255,0.88)",
               fontSize: "11px",
               fontFamily: "var(--font-mono, monospace)",
               letterSpacing: "0.08em",
               transition: "all 0.3s ease",
+              backdropFilter: "blur(6px)",
+              WebkitBackdropFilter: "blur(6px)",
+              textShadow: "0 1px 3px rgba(0,0,0,0.9)",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.5)",
             }}
           >
             <span
@@ -168,7 +175,8 @@ export const CleanUI = memo(function CleanUI({
                 width: "6px",
                 height: "6px",
                 borderRadius: "50%",
-                background: "var(--fg-dim)",
+                background: "rgba(125,211,252,0.8)",
+                boxShadow: "0 0 4px rgba(125,211,252,0.6)",
                 display: "inline-block",
               }}
             />
