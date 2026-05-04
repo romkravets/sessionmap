@@ -5,7 +5,7 @@ Crypto trading sessions visualised on a real-time 3D globe — live prices, whal
 
 ## Демо
 
-[![Демо на YouTube](https://youtu.be/A4CsLx5VScA?si=LviRHXAy_yGIXC_r)](https://youtu.be/A4CsLx5VScA?si=LviRHXAy_yGIXC_r)
+[![SessionMap](https://img.youtube.com/vi/A4CsLx5VScA/maxresdefault.jpg)](https://youtu.be/A4CsLx5VScA?si=9BCMOei7E7ZpkVwp)
 
 ## Stack
 
