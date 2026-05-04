@@ -63,13 +63,18 @@ const server = http.createServer(app);
 
 const isDev = process.env.NODE_ENV !== "production";
 
+const ALLOWED_ORIGINS = new Set([
+  CLIENT_ORIGIN,
+  "https://sessionmap-web.onrender.com",
+]);
+
 const wss = new WebSocketServer({
   server,
   verifyClient: ({ origin }, cb) => {
     // In dev accept any localhost origin (port varies across restarts)
     const allowed = !origin
       || (isDev && /^https?:\/\/localhost(:\d+)?$/.test(origin))
-      || origin === CLIENT_ORIGIN;
+      || ALLOWED_ORIGINS.has(origin);
     cb(allowed, 403, "Forbidden origin");
   },
 });
