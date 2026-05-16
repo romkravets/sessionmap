@@ -352,6 +352,27 @@ export const CleanUI = memo(function CleanUI({
               {volatility.toUpperCase()}
             </span>
           </div>
+
+          <a
+            href="https://github.com/romkravets"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              pointerEvents: "auto",
+              fontSize: "9px",
+              fontFamily: "var(--font-mono, monospace)",
+              color: "var(--fg-muted)",
+              opacity: 0.35,
+              letterSpacing: "0.08em",
+              textDecoration: "none",
+              marginTop: "8px",
+              transition: "opacity 0.2s",
+            }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "0.7")}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "0.35")}
+          >
+            github.com/romkravets
+          </a>
         </div>
 
         {/* Center column: volume bars, altcoin season, gas */}

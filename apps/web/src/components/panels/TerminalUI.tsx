@@ -195,6 +195,25 @@ export const TerminalUI = memo(function TerminalUI({
           >
             {new Date().toISOString().slice(11, 19)} UTC
           </span>
+          <a
+            href="https://github.com/romkravets"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              pointerEvents: "all",
+              fontFamily: "var(--font-mono, monospace)",
+              fontSize: "9px",
+              color: "var(--fg-muted)",
+              opacity: 0.4,
+              letterSpacing: "0.08em",
+              textDecoration: "none",
+              transition: "opacity 0.2s",
+            }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "0.8")}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.opacity = "0.4")}
+          >
+            github.com/romkravets
+          </a>
         </div>
         <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
           <GlobeModeBar mode={globeMode} onChange={onGlobeModeChange} />
